@@ -42,6 +42,9 @@ public class Lexer2 implements mjTokenConstants {
   static int lineNum = 1;
   static int colNum  = 0;
 
+  static Token tempToken = new Token(0, 0, 0, ""); // Needed to prevent skipping of characters '1.231'
+  static int tempChar; // Also needed to prevent skipping of characters, like in '0main'
+
   // Start reading characters from the input file, and print out the tokens
   public static void main(String[] args) {
     try {
@@ -57,13 +60,38 @@ public class Lexer2 implements mjTokenConstants {
           } else if (tkn.kind == INTLIT) {
             try {
               System.out.print("INTLIT" + "(" + Integer.parseInt(tkn.lexeme) + ")" + "\n");
+              // If we had a token directly after an int, we don't want to accidentally skip it
+              if (tempToken.kind != 0) {
+                if (tempToken.kind == ID) {
+                  System.out.print("(" + tempToken.line + "," + tempToken.column + ")\t");
+                  System.out.print("ID" + "(" + tempToken.lexeme + ")" + "\n");
+                } else {
+                  System.out.print("(" + tempToken.line + "," + tempToken.column + ")\t");
+                  System.out.print((char)Integer.parseInt((tempToken.lexeme)) + "\n");
+                }
+                ++tknCount;
+                tempToken.kind = 0;
+                tempToken.line = 0;
+                tempToken.column = 0;
+                tempToken.lexeme = "";
+              }
             } catch (NumberFormatException e) {
               throw new TokenMgrError("Integer overflow: " + tkn.lexeme, 0);
             }
           } else if (tkn.kind == STRLIT) {
                 System.out.print("STRLIT" + "(" + tkn.lexeme + ")" + "\n");
           } else {
-                System.out.print(tkn.lexeme + "\n");
+              System.out.print(tkn.lexeme + "\n");
+              // If we had a token directly after an int, we don't want to accidentally skip it
+              if (tempToken.kind != 0) {
+                System.out.print("(" + tempToken.line + "," + tempToken.column + ")\t");
+                System.out.print((char)Integer.parseInt((tempToken.lexeme)) + "\n");
+                ++tknCount;
+                tempToken.kind = 0;
+                tempToken.line = 0;
+                tempToken.column = 0;
+                tempToken.lexeme = "";
+              }
           }
           ++tknCount;
         }
@@ -173,6 +201,8 @@ public class Lexer2 implements mjTokenConstants {
                 c = nextChar();
                 if (c == tempC) {
                   buffer.append((char) c);
+                } else if (isDelimiter(c) || isOperator(c)) {
+                  tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
                 }
               //System.out.println(buffer.toString());
             } else if ((c == '>') || (c == '<') || (c == '!')) {
@@ -180,6 +210,8 @@ public class Lexer2 implements mjTokenConstants {
               c = nextChar();
               if (c == '=') {
                 buffer.append((char) '=');
+              } else if (isDelimiter(c) || isOperator(c)) {
+                  tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
               }
             } else {
               buffer.append((char) c);
@@ -242,10 +274,16 @@ public class Lexer2 implements mjTokenConstants {
             int beginColumn = colNum;
             buffer.setLength(0);
 
+            // Needed for cases where a letter follows an int, i.e '0main'
+            if (tempChar != 0) {
+              buffer.append((char) tempChar);
+              tempChar = 0;
+            }
+
             do {
               buffer.append((char) c);
               c = nextChar();
-            } while (isLetter(c) || isNumber(c) || isDelimiter(c) || isOperator(c));
+            } while (isLetter(c) || isNumber(c));
             // Check if this string is a keyword.
             // We use an if conditional rather than a switch in case we need
             // to do a regex search
@@ -303,9 +341,13 @@ public class Lexer2 implements mjTokenConstants {
               c = nextChar();
             } while (isNumber(c));
 
-            if (c != '\n' && c != '\r' && c != ' ') {
-              // We need to keep track of c since this int is concatted with it
+            // There are cases where another non-number follows a number
+            if (isOperator(c) || isDelimiter(c)) {
+              tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
+            } else if (isLetter(c)) {
+              tempChar = c;
             }
+
             return new Token(INTLIT, beginLine, beginColumn, buffer.toString());
           }
 
