@@ -1,0 +1,9 @@
+there
+// this is a comment
+hello
+a / b
+
+/* a
+multi line
+comment
+*/

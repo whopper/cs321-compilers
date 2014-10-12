@@ -1,0 +1,93 @@
+//----------------------------------------------------------------------
+// CS321 Assignment 1 (Fall 2014)
+//
+// miniJava Lexer1 (JavaCC Specification)
+//----------------------------------------------------------------------
+
+PARSER_BEGIN(Lexer1)
+import java.io.*;
+
+public class Lexer1 {
+  static String tknName = null; // For arbitrary token names
+
+  public static void main(String [] args) {
+    try {
+      FileInputStream stream = new FileInputStream(args[0]);
+      Lexer1 lexer = new Lexer1(stream);
+      Token tkn = lexer.getNextToken();
+      int tknCount = 0;
+
+      while (tkn.kind != 0) {
+        System.out.print("(" + tkn.beginLine + "," + tkn.beginColumn + ")\t");
+        if (tkn.kind == INTLIT) {
+          try {
+            System.out.println((tknName==null? "" : tknName) + "(" + Integer.parseInt(tkn.image) + ")");
+          } catch (NumberFormatException e) {
+            throw new TokenMgrError("Integer overflow: " + tkn.image, 0);
+          }
+        } else if (tkn.kind == KEYWORD || tkn.kind == DELIMITER || tkn.kind == OPERATOR) {
+          System.out.println(tkn.image);
+        } else {
+          System.out.println((tknName==null? "" : tknName) + "(" + tkn.image + ")");
+        }
+
+        tknCount++;
+        tknName = null;
+        tkn = lexer.getNextToken();
+      }
+      System.out.println("Total: " + tknCount + " tokens");
+    } catch(TokenMgrError e) {
+      System.err.println(e);
+    } catch (Exception e) {
+      System.err.println(e);
+    }
+  }
+}
+PARSER_END(Lexer1)
+
+// Token definitions
+
+SKIP: { " " | "\t" | "\n" | "\r" } // White space characters
+
+// Skip comments, both single and multi line
+SKIP: {
+  <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| "/*" : MULTILINECOMMENT  // Here we enter multiline comment state
+}
+
+// Allows us to catch unterminated comments, as discovered from a Google search
+<MULTILINECOMMENT> MORE:
+{
+  <~[]>
+}
+
+<MULTILINECOMMENT> SKIP :  // rules for inside of multiline comment state
+{
+  "*/" : DEFAULT  // Back to the default state when we hit the end comment marker
+}
+
+TOKEN:  // Define keywords
+{
+  <KEYWORD:  "class" | "extends" | "static" | "public" | "void" | "int"
+| "boolean" | "new" | "if" | "else" | "while" | "return" | "main"
+| "true" | "false" | "String" | "System" | "out" | "println">
+}
+
+TOKEN:  // Identifiers, int literals and string literals
+{
+  <#DIGIT:  ["0"-"9"]>
+|  <#LETTER: ["A"-"Z"]|["a"-"z"]>
+|  <ID:      (<LETTER>(<LETTER>|<DIGIT>)*)>    { Lexer1.tknName = "ID";     }
+|  <INTLIT:  (<DIGIT>)+>                       { Lexer1.tknName = "INTLIT"; }
+|  <STRLIT:  ("\""(~["\"", "\r", "\n"])*"\"")> { Lexer1.tknName = "STRLIT"; }
+}
+
+TOKEN:  // General operators
+{
+  <OPERATOR: "+"|"-"|"*"|"/"|"&&"|"||"|"|"|"!"|"=="|"!="|"<"|"<="|">"|">=">
+}
+
+TOKEN:  // delimiters
+{
+  <DELIMITER: "="|";"|","|"."|"("|")"|"["|"]"|"{"|"}">
+}

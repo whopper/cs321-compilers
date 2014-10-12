@@ -1,0 +1,6 @@
+/* A valid comment */
+
+/* An unterminated
+comment
+
+"A valid string"
