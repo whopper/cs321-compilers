@@ -2,6 +2,8 @@
 // CS321 Assignment 1 (Fall 2014)
 //
 // miniJava Lexer2 (Manual Implementation)
+//
+// Will Hopper
 //----------------------------------------------------------------------
 
 import java.io.*;
