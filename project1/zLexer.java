@@ -6,7 +6,7 @@
 
 import java.io.*;
 
-public class Lexer2 implements mjTokenConstants {
+public class zLexer implements mjTokenConstants {
 
   static class LexError extends Exception {
     int line;
@@ -37,62 +37,46 @@ public class Lexer2 implements mjTokenConstants {
 
   // Fine to read from
   static FileInputStream input = null;
+  static FileInputStream inputTest = null;
 
   // Line and column nums
   static int lineNum = 1;
   static int colNum  = 0;
 
-  // The following two variables are a workaround for the lack of lookahead
-  static Token tempToken = new Token(0, 0, 0, ""); // Needed to prevent skipping of characters '1.231'
-  static int tempChar; // Also needed to prevent skipping of characters, like in '0main'
+  // static Token tempToken = new Token(0, 0, 0, ""); // Used to share data about blobs of text
 
   // Start reading characters from the input file, and print out the tokens
   public static void main(String[] args) {
     try {
       if (args.length == 1) {
         input = new FileInputStream(args[0]);
-        Token tkn;
+        Token tkn, tempToken;
         int tknCount = 0;
+        String text;
 
-        while ((tkn = nextToken()) != null) {
+        while ((tempToken = nextText()) != null) {
+          tkn = parseText(tempToken);
           System.out.print("(" + tkn.line + "," + tkn.column + ")\t");
+
           if (tkn.kind == ID) {
             System.out.print("ID" + "(" + tkn.lexeme + ")" + "\n");
           } else if (tkn.kind == INTLIT) {
             try {
               System.out.print("INTLIT" + "(" + Integer.parseInt(tkn.lexeme) + ")" + "\n");
-
-              // If we had a token directly after an int, we don't want to accidentally skip it
-              if (tempToken.kind != 0) {
-                if (tempToken.kind == ID) {
-                  System.out.print("(" + tempToken.line + "," + tempToken.column + ")\t");
-                  System.out.print("ID" + "(" + tempToken.lexeme + ")" + "\n");
-                } else {
-                  System.out.print("(" + tempToken.line + "," + tempToken.column + ")\t");
-                  System.out.print((char)Integer.parseInt((tempToken.lexeme)) + "\n");
-                }
-                ++tknCount;
-                resetTempToken();
-              }
             } catch (NumberFormatException e) {
               throw new TokenMgrError("Integer overflow: " + tkn.lexeme, 0);
             }
           } else if (tkn.kind == STRLIT) {
-                System.out.print("STRLIT" + "(" + tkn.lexeme + ")" + "\n");
+              System.out.print("STRLIT" + "(" + tkn.lexeme + ")" + "\n");
+
           } else {
               System.out.print(tkn.lexeme + "\n");
-
-              // If we had a token directly after an int, we don't want to accidentally skip it
-              if (tempToken.kind != 0) {
-                System.out.print("(" + tempToken.line + "," + tempToken.column + ")\t");
-                System.out.print((char)Integer.parseInt((tempToken.lexeme)) + "\n");
-                ++tknCount;
-                resetTempToken();
-              }
           }
           ++tknCount;
         }
+
         System.out.println("Total: " + tknCount + " tokens");
+
       } else {
         System.err.println("Input filename must be specified as argument\n");
       }
@@ -114,18 +98,38 @@ public class Lexer2 implements mjTokenConstants {
     return c;
   }
 
-  // Clear the temp token buffer
-  static void resetTempToken() {
-    tempToken.kind = 0;
-    tempToken.line = 0;
-    tempToken.column = 0;
-    tempToken.lexeme = "";
+  // Read from file until we hit whitespace between tokens
+  static Token nextText() throws Exception {
+    StringBuilder buffer = new StringBuilder();
+    int c = 0;
+    int beginLine = lineNum;
+    int beginColumn = colNum;
+
+    buffer.setLength(0);
+    do {
+      // We get the next blob of text, which could be something like
+      // main, -, 0main, <=, <<, ...
+      // We'll then parse this string into appropriate tokens
+      buffer.append((char) c);
+      c = nextChar();
+    } while (!isWhiteSpace(c));
+    return new Token(1, beginLine, beginColumn+1, buffer.toString());
+  }
+
+  static Token parseText(Token tempToken) {
+    if (tempToken.lexeme.equals("Hello")) {
+      return new Token(ID, tempToken.line, tempToken.column, "Hello");
+    } else {
+      return new Token(33, tempToken.line, tempToken.column, tempToken.lexeme);
+    }
   }
 
   // Figure out what the next token is and return its code
   static Token nextToken() throws Exception {
     StringBuilder buffer = new StringBuilder();
     int c = nextChar();
+
+    //String test = nextText();
 
     for (;;) {
       switch(c) {
@@ -171,7 +175,6 @@ public class Lexer2 implements mjTokenConstants {
           } else { // This is the '/' operator
             int beginLine = lineNum;
             int beginColumn = colNum;
-            colNum += 1;
             return new Token(57, beginLine, beginColumn, "/");
           }
         default:
@@ -208,7 +211,7 @@ public class Lexer2 implements mjTokenConstants {
                 if (c == tempC) {
                   buffer.append((char) c);
                 } else if (isDelimiter(c) || isOperator(c)) {
-                  tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
+                  //tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
                 }
               //System.out.println(buffer.toString());
             } else if ((c == '>') || (c == '<') || (c == '!')) {
@@ -217,7 +220,7 @@ public class Lexer2 implements mjTokenConstants {
               if (c == '=') {
                 buffer.append((char) '=');
               } else if (isDelimiter(c) || isOperator(c)) {
-                  tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
+                  //tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
               }
             } else {
               buffer.append((char) c);
@@ -281,11 +284,10 @@ public class Lexer2 implements mjTokenConstants {
             buffer.setLength(0);
 
             // Needed for cases where a letter follows an int, i.e '0main'
-            if (tempChar != 0) {
-              buffer.append((char) tempChar);
-              tempChar = 0;
-              beginColumn -= 1;
-            }
+            //if (tempChar != 0) {
+            //  buffer.append((char) tempChar);
+             // tempChar = 0;
+            //}
 
             do {
               buffer.append((char) c);
@@ -351,11 +353,11 @@ public class Lexer2 implements mjTokenConstants {
             } while (isNumber(c));
 
             // There are cases where another non-number follows a number
-            if (isOperator(c) || isDelimiter(c)) {
-              tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
-            } else if (isLetter(c)) {
-              tempChar = c;
-            }
+            //if (isOperator(c) || isDelimiter(c)) {
+              //tempToken = new Token(33, beginLine, beginColumn+1, Integer.toString(c));
+            //} else if (isLetter(c)) {
+              //tempChar = c;
+            //}
 
             return new Token(INTLIT, beginLine, beginColumn, buffer.toString());
           }
@@ -389,6 +391,14 @@ public class Lexer2 implements mjTokenConstants {
   private static boolean isDelimiter(int c) {
     if (c == '=' || c == ';' || c == ',' || c == '.' || c == '(' ||
         c == ')' || c == '[' || c == ']' || c == '{' || c == '}') {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static boolean isWhiteSpace(int c) {
+    if (c == '\n' || c == '\r' || c == '\t' || c == ' ') {
       return true;
     } else {
       return false;

@@ -70,7 +70,7 @@ TOKEN:  // Define keywords
 {
   <KEYWORD:  "class" | "extends" | "static" | "public" | "void" | "int"
 | "boolean" | "new" | "if" | "else" | "while" | "return" | "main"
-| "true" | "false" | "String" | "System" | "out" | "println">
+| "true" | "false" | "String" | "System" | "out" | "println" | "this">
 }
 
 TOKEN:  // Identifiers, int literals and string literals
