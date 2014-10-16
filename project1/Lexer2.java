@@ -270,6 +270,12 @@ public class Lexer2 implements mjTokenConstants {
               c = nextChar();
             } while (isLetter(c) || isNumber(c));
 
+            // If we've run into a delimiter or operator, push back into stream
+            if (isDelimiter(c) || isOperator(c)) {
+              --colNum;
+              input.unread(c);
+            }
+
             // Check for keywords
             if (buffer.toString().equals("class")) {
               return new Token(CLASS, beginLine, beginColumn, buffer.toString());
