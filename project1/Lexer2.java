@@ -44,7 +44,11 @@ public class Lexer2 implements mjTokenConstants {
   static int lineNum = 1;
   static int colNum  = 0;
 
-  // Start reading characters from the input file, and print out the tokens
+  /*
+  * Main(String[] args)
+  * The main program loop
+  * Kicks off character reading from input file and loops until done
+  */
   public static void main(String[] args) {
     try {
       if (args.length == 1) {
@@ -54,6 +58,7 @@ public class Lexer2 implements mjTokenConstants {
 
         while ((tkn = nextToken()) != null) {
           System.out.print("(" + tkn.line + "," + tkn.column + ")\t");
+
           if (tkn.kind == ID) {
             System.out.print("ID" + "(" + tkn.lexeme + ")" + "\n");
           } else if (tkn.kind == INTLIT) {
@@ -69,6 +74,7 @@ public class Lexer2 implements mjTokenConstants {
           }
           ++tknCount;
         }
+
         System.out.println("Total: " + tknCount + " tokens");
       } else {
         System.err.println("Input filename must be specified as argument\n");
@@ -78,7 +84,11 @@ public class Lexer2 implements mjTokenConstants {
     }
   }
 
-  // Handles line and column number watching
+  /*
+  * nextchar()
+  * Returns int representing the next character
+  * Handles updating of global line and column numbers
+  */
   static int nextChar() throws Exception {
     int c = input.read();
     if (c == '\n') {
@@ -92,6 +102,11 @@ public class Lexer2 implements mjTokenConstants {
   }
 
   // Figure out what the next token is and return its code
+  /*
+  * nextToken()
+  * Returns Toeken representing the next parsed token to print
+  *
+  */
   static Token nextToken() throws Exception {
     StringBuilder buffer = new StringBuilder();
     int c = nextChar();
@@ -100,14 +115,13 @@ public class Lexer2 implements mjTokenConstants {
       switch(c) {
         case -1:
           return null;
-        // The next cases skip all whitespace
-        case ' ':
+        case ' ':    // Skip whitespace characters
         case '\t':
         case '\n':
         case '\r':
           c = nextChar();
           continue;
-        case '/':
+        case '/':          // Here we may have a single or multiline comment
           c = nextChar();
           if (c == '/') { // We're dealing with a single line comment
             do {
@@ -128,7 +142,7 @@ public class Lexer2 implements mjTokenConstants {
             while(buffer.toString().charAt(buffer.length() - 2) != '*' ||
                   buffer.toString().charAt(buffer.length() -1) != '/') {
 
-              if (c == -1) {  // EOF
+              if (c == -1) {  // We've reached EOF before comment terminated
                 throw new LexError(lineNum, colNum, "Encountered <EOF> before termination of comment: " + buffer.toString());
               }
               c = nextChar();
