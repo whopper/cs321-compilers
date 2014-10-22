@@ -1,0 +1,76 @@
+PARSER_BEGIN(MjParser0)
+public class MjParser0 {
+  public static void main(String args[]) {
+    try {
+      MjParser0 parser = new MjParser0(System.in); 
+      parser.Expr0(); 
+    } catch (ParseException e) {
+      System.err.println(e);
+    } catch (Exception e) {
+      System.err.println(e);
+    }
+  } 
+}
+PARSER_END(MjParser0)
+
+// TOKEN DEFINITIONS
+
+SKIP:  { " " | "\t" | "\n" | "\r" | "\f" }
+
+TOKEN: { <#DIGIT:  ["0"-"9"]> }
+TOKEN: { <INTLIT:  (<DIGIT>)+> }
+TOKEN: { <ID: (["A"-"Z"]|["a"-"z"])+> }
+
+
+TOKEN: { <EXTID: ("[this.]" <ID>)("." <ID>)?> }
+TOKEN: { <LITERAL: (<DIGIT>)+ | "true" | "false"> }
+TOKEN: { <BINOP: "+"|"-"|"*"|"/"|"&&"|"||"|"==" |"!="|"<"|"<="|">"|">="> }
+TOKEN: { <UNOP: "-" | "!"> }
+
+// GRAMMAR RULES
+
+// Expr0 -> Expr $    // augmented production
+void Expr0(): {}
+{ 
+  Expr() <EOF>
+}
+
+// Expr -> I Expr' (Formerly Expr -> Expr BinOp Expr)
+void Expr(): {}
+{
+  I() ExprPrime()
+}
+
+void ExprPrime(): {}
+{
+  <BINOP> Expr()
+}
+
+void I(): {}
+{
+  <UNOP> Expr()
+  | "(" Expr() ")"
+  | LOOKAHEAD(2) <EXTID> "(" "["Args()"]" ")"
+  | LOOKAHEAD(2) Lvalue()
+  | <LITERAL>
+}
+
+void Args(): {}
+{
+  Expr() ("," Expr())?
+}
+
+void Lvalue(): {}
+{
+  LOOKAHEAD(2) <EXTID> "[" Expr() "]"
+  | LOOKAHEAD(2) <EXTID>
+}
+// E -> + E E | - E E | id
+//
+/*
+void E(): {}
+{ 
+  "+" E() E() | "-" E() E() | <ID>
+}
+*/
+
