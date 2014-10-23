@@ -13,15 +13,11 @@ public interface MjParser0Constants {
   /** RegularExpression Id. */
   int INTLIT = 7;
   /** RegularExpression Id. */
-  int ID = 8;
+  int RESERVED = 8;
   /** RegularExpression Id. */
-  int EXTID = 9;
+  int ID = 9;
   /** RegularExpression Id. */
   int LITERAL = 10;
-  /** RegularExpression Id. */
-  int BINOP = 11;
-  /** RegularExpression Id. */
-  int UNOP = 12;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -36,16 +32,28 @@ public interface MjParser0Constants {
     "\"\\f\"",
     "<DIGIT>",
     "<INTLIT>",
+    "\"this\"",
     "<ID>",
-    "<EXTID>",
     "<LITERAL>",
-    "<BINOP>",
-    "<UNOP>",
+    "\"+\"",
+    "\"-\"",
+    "\"*\"",
+    "\"/\"",
+    "\"<\"",
+    "\"<=\"",
+    "\">\"",
+    "\">=\"",
+    "\"==\"",
+    "\"!=\"",
+    "\"&&\"",
+    "\"||\"",
+    "\"!\"",
     "\"(\"",
     "\")\"",
     "\"[\"",
     "\"]\"",
     "\",\"",
+    "\"this.\"",
   };
 
 }

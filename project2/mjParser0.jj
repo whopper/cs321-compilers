@@ -1,15 +1,19 @@
 PARSER_BEGIN(MjParser0)
+import java.io.FileInputStream;
+
 public class MjParser0 {
   public static void main(String args[]) {
     try {
-      MjParser0 parser = new MjParser0(System.in); 
-      parser.Expr0(); 
+      FileInputStream stream = new FileInputStream(args[0]);
+      MjParser0 parser = new MjParser0(stream);
+      parser.Program();
+      stream.close();
     } catch (ParseException e) {
       System.err.println(e);
     } catch (Exception e) {
       System.err.println(e);
     }
-  } 
+  }
 }
 PARSER_END(MjParser0)
 
@@ -18,59 +22,86 @@ PARSER_END(MjParser0)
 SKIP:  { " " | "\t" | "\n" | "\r" | "\f" }
 
 TOKEN: { <#DIGIT:  ["0"-"9"]> }
-TOKEN: { <INTLIT:  (<DIGIT>)+> }
+TOKEN: { <#INTLIT:  (<DIGIT>)+> }
+TOKEN: { <RESERVED: "this"> }
 TOKEN: { <ID: (["A"-"Z"]|["a"-"z"])+> }
-
-
-TOKEN: { <EXTID: ("[this.]" <ID>)("." <ID>)?> }
-TOKEN: { <LITERAL: (<DIGIT>)+ | "true" | "false"> }
-TOKEN: { <BINOP: "+"|"-"|"*"|"/"|"&&"|"||"|"==" |"!="|"<"|"<="|">"|">="> }
-TOKEN: { <UNOP: "-" | "!"> }
+TOKEN: { <LITERAL: (<INTLIT>)+ | "true" | "false"> }
 
 // GRAMMAR RULES
+/* Expr section */
 
 // Expr0 -> Expr $    // augmented production
 void Expr0(): {}
-{ 
+{
   Expr() <EOF>
 }
 
-// Expr -> I Expr' (Formerly Expr -> Expr BinOp Expr)
-void Expr(): {}
+void Expr(): {System.out.println("IN Expr()");}
 {
-  I() ExprPrime()
+  B()
 }
 
-void ExprPrime(): {}
+void B(): {System.out.println("M +|-"); Token t;}
 {
-  <BINOP> Expr()
+  C() (("+"|"-") C())*
+}
+
+void C(): {System.out.println("M *|/");}
+{
+  D() (("*"|"/") D())*
+}
+
+void D(): {System.out.println("M <|<=|>");}
+{
+  E() (("<"|"<="|">"|">=") E())*
+}
+
+void E(): {System.out.println("M ==|!=");}
+{
+  F() (("==" | "!=") F())*
+}
+
+void F(): {System.out.println("M &&");}
+{
+  G() (("&&") G())*
+}
+
+void G(): {System.out.println("M ||");}
+{
+  H() (("||") H())*
+}
+
+void H(): {}
+{
+  ("!")? I()
 }
 
 void I(): {}
 {
-  <UNOP> Expr()
-  | "(" Expr() ")"
-  | LOOKAHEAD(2) <EXTID> "(" "["Args()"]" ")"
-  | LOOKAHEAD(2) Lvalue()
-  | <LITERAL>
+  ("-")? J()
 }
 
-void Args(): {}
+void J(): {System.out.println("In J()"); Token t;}
+{
+  "(" Expr() ")"
+  | ExtId()[ "(" "["Args()"]" ")" | "[" Expr() "]"]
+  // | Lvalue()
+  | (t = <LITERAL> {System.out.println(t.image);})
+}
+
+void Args(): {System.out.println("IN Args()");}
 {
   Expr() ("," Expr())?
 }
 
-void Lvalue(): {}
+void Lvalue(): {System.out.println("IN Lvalue()");}
 {
-  LOOKAHEAD(2) <EXTID> "[" Expr() "]"
-  | LOOKAHEAD(2) <EXTID>
+  LOOKAHEAD(2) ExtId() "[" Expr() "]"
+  | LOOKAHEAD(2) ExtId()
 }
-// E -> + E E | - E E | id
-//
-/*
-void E(): {}
-{ 
-  "+" E() E() | "-" E() E() | <ID>
-}
-*/
 
+void ExtId(): {System.out.println("IN ExtId()");}
+{
+  "this." <ID>
+  | <ID>
+}

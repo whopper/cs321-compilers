@@ -18,12 +18,12 @@ public class mjRawGrammar {
   public static void main(String [] args) {
     try {
       if (args.length == 1) {
-	FileInputStream stream = new FileInputStream(args[0]);
-	new mjRawGrammar(stream).Program();
-	stream.close();
-	System.out.println("Program's syntax is valid.");
+        FileInputStream stream = new FileInputStream(args[0]);
+        new mjRawGrammar(stream).Program();
+        stream.close();
+        System.out.println("Program's syntax is valid.");
       } else {
-	System.out.println("Need a file name as command-line argument.");
+        System.out.println("Need a file name as command-line argument.");
       }
     } catch (TokenMgrError e) {
       System.err.println(e);
@@ -45,13 +45,16 @@ SKIP : /* White space */
 
 SKIP : /* Comments -- multi-line form and error detection not included */
 {
-  <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")> 
+  <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| <"/*" ( ~["*"] | (["*"])+ (~["/"]) )* (["*"])+ "/">
+| <"/*" ( ~["*"] | (["*"])+ (~["/"]) )* (["*"])+ >
+  { if (true) throw new TokenMgrError("Unterminated multi-line comments ", 0); }
 }
 
 TOKEN : /* Keywords */
 {
   "class" | "extends" | "static" | "public" | "void" | "int" | "boolean"
-| "new" | "this" | "if" | "else" | "while" | "return" | "main" | "String" 
+| "new" | "this" | "if" | "else" | "while" | "return" | "main" | "String"
 | "true" | "false" | "System" | "out" | "println" 
 }
 
@@ -61,14 +64,24 @@ TOKEN : /* Internal tokens */
 | <#LETTER: (["A"-"Z"]|["a"-"z"])>
 }
 
-TOKEN : /* Integer literals -- error detection not included */
+TOKEN : /* Integer literals */
 {
-  <INTLIT: (<DIGIT>)+> 
+  <INTLIT: (<DIGIT>)+>
+    {
+      /* Detect integer overflow */
+      try {
+        Integer.parseInt(image);
+      } catch(NumberFormatError e) {
+        throw new TokenMgrError("Integer overflow: " + image, 0);
+      }
+    }
 }
 
 TOKEN : /* String literals  -- error detection not included */
 {
   <STRLIT: ("\"" (~["\"","\n"])* "\"")>
+| <("\"" (~["\"", "\n"])*)>
+  { if (true) throw new TokenMgrError("Unterminated string"); } /* Detect unterm. strings */
 }
 
 TOKEN : /* Identifiers */
@@ -78,7 +91,7 @@ TOKEN : /* Identifiers */
 
 TOKEN : /* Operators and delimiters */
 {
-   "+" | "-" | "*" | "/" | "&&" | "||" | "!" 
+   "+" | "-" | "*" | "/" | "&&" | "||" | "!"
 |  "==" | "!=" | "<" | "<=" | ">" | ">="
 |  "=" | ";" | "," | "." | "(" | ")" | "[" | "]" | "{" | "}"
 }
@@ -94,35 +107,38 @@ void Program(): {}
   (ClassDecl())* <EOF>
 }
 
-// ClassDecl -> "class" <ID> ["extends" <ID>] "{" {VarDecl} {MethodDecl} "}"
-//
+/* Original:
+ * ClassDecl -> "class" <ID> ["extends" <ID>] "{" {VarDecl} {MethodDecl} "}"
+*/
 void ClassDecl(): {}
 {
   "class" <ID> ["extends" <ID>] "{" (VarDecl())* (MethodDecl())* "}"
 }
 
-// MethodDecl -> "public" ExtType <ID> "(" [Param {"," Param}] ")" 
-//                 "{" {VarDecl} {Stmt} "}"
-//            |  "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")"
-//                 "{" {VarDecl} {Stmt} "}" 
-// 
-void MethodDecl(): {} 
+
+/* Original:
+ * MethodDecl -> "public" ExtType <ID> "(" [Param {"," Param}] ")" 
+ *                 "{" {VarDecl} {Stmt} "}"
+ *            |  "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")"
+ *                 "{" {VarDecl} {Stmt} "}" 
+*/
+void MethodDecl(): {}
 {
-  "public" ExtType() <ID> "(" [Param() ("," Param())*] ")" 
+  "public" ExtType() <ID> "(" [Param() ("," Param())*] ")"
           "{" (VarDecl())* (Stmt())* "}"
 | "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")"
           "{" (VarDecl())* (Stmt())* "}"
 }
 
-// Param -> Type <ID> 
+// Param -> Type <ID>
 //
-void Param(): {} 
+void Param(): {}
 {
-  Type() <ID> 
+  Type() <ID>
 }
 
 // VarDecl -> Type <ID> ["=" InitExpr] ";"
-//  
+//
 void VarDecl(): {}
 {
   Type() <ID> ["=" InitExpr()] ";"
@@ -136,12 +152,12 @@ void ExtType(): {}
 }
 
 // Type -> BasicType 
-//      |  BasicType "[" "]" 
+//      |  BasicType "[" "]"
 //      |  <ID>
 //
 void Type(): {}
 {
-  BasicType() 
+  BasicType()
 | BasicType() "[" "]"
 | <ID>
 }
@@ -186,43 +202,60 @@ void PrintArg(): {}
   Expr() | <STRLIT>
 }
 
-// InitExpr -> "new" BasicType "[" <INTLIT> "]" 
+// InitExpr -> "new" BasicType "[" <INTLIT> "]"
 //          |  "new" <ID> "(" ")"
-//          |  Expr 
+//          |  Expr
 //
 void InitExpr(): {}
 {
-  "new" BasicType() "[" <INTLIT> "]" 
+  "new" BasicType() "[" <INTLIT> "]"
 | "new" <ID> "(" ")"
 | Expr()
 }
 
-// Expr -> Expr BinOp Expr 
-//      |  UnOp Expr
-//      |  "(" Expr ")" 
-//      |  ExtId "(" [Args] ")"
-//      |  Lvalue
-//      |  Literal
-//
+/* Original:
+ * Expr -> Expr BinOp Expr
+ *      |  UnOp Expr
+ *      |  "(" Expr ")"
+ *      |  ExtId "(" [Args] ")"
+ *      |  Lvalue
+ *      |  Literal
+*/
 void Expr(): {}
 {
-  Expr() BinOp() Expr() 
-| UnOp() Expr()
-| "(" Expr() ")" 
-| ExtId() "(" [Args()] ")"
-| Lvalue()
-| Literal()
+  A()
 }
 
-// Lvalue -> ExtId "[" Expr "]"
-//        |  ExtId 
+/*  Operator precedence functions
+ *  Needed to remove ambiguity from Expr()
+ */
+void A(): {} { B() (("+"|"-") B())* }
+void B(): {} { C() (("*"|"/") C())* }
+void C(): {} { D() (("<"|"<=|>|>=") D())* }
+void D(): {} { E() (("=="|"!=") E())* }
+void E(): {} { F() (("&&") F())* }
+void F(): {} { G() (("||") G())* }
+void G(): {} { ("!")? H() }
+void H(): {} { ("-")? I() }
+
+void I(): {}
+{
+  "(" Expr() ")"
+  | ExtId() "(" [Args()] ")"
+  | Lvalue()
+  | Literal()
+}
+
+/* Original:
+ * Lvalue -> ExtId "[" Expr "]"
+ *           | ExtId
+ */
 void Lvalue(): {}
 {
-  ExtId() "[" Expr() "]"
-| ExtId()
+  ExtId() ["[" Expr() "]"]
 }
 
-// ExtId -> ["this" "."] <ID> {"." <ID>} 
+// ExtId -> ["this" "."] <ID> {"." <ID>}
 //
 void ExtId(): {}
 {
@@ -236,13 +269,13 @@ void Literal(): {}
   <INTLIT> | "true" | "false"
 }
 
-// BinOp -> "+" | "-" | "*" | "/" | "&&" | "||" 
-//       |  "==" | "!=" | "<" | "<=" | ">" | ">=" 
+// BinOp -> "+" | "-" | "*" | "/" | "&&" | "||"
+//       |  "==" | "!=" | "<" | "<=" | ">" | ">="
 //
 void BinOp(): {}
 {
-  "+"  | "-"  | "*" | "/"  | "&&" | "||" 
-| "==" | "!=" | "<" | "<=" | ">"  | ">=" 
+  "+"  | "-"  | "*" | "/"  | "&&" | "||"
+| "==" | "!=" | "<" | "<=" | ">"  | ">="
 }
 
 // UnOp -> "-" | "!"

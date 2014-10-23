@@ -16,9 +16,9 @@ JCC = javacc
 .java.class:
 	$(JC) $(JFLAGS) $*.java
 
-all:	mjParsr0
+all:	mjParser0
 
-mjParser0: mjParser0.class
+mjParser0: MjParser0.class
 
 clean:	
 	rm *.class
