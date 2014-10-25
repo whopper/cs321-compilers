@@ -9,6 +9,33 @@
 //
 //
 
+/*
+  Notes on my changes to the grammar:
+  * Ripped out Lvalue()
+    - Was causing indirect left recursion in several places, and since it
+      only had a few productions, I just directly implanted them wherever
+      an Lvalue() call was needed.
+  * Ripped out BinOp
+    - Obviously, the operators needed to be put in order of their
+      precedence to remove ambiguity. To accomplish this, I set up
+      a sort of reverse filter system, where the grammar looks for
+      the lowest precedence and works its way down to highest
+      precedence. This guarantees that the lower precedence operators
+      will appear at the top of our parse tree, which means that
+      the higher precedence operators appear nearer the bottom,
+      allowing them to be evaluated first as we expect.
+
+      For example, void A(): {} {B() (("||") B())* }
+      First we go directly into B(), which is the the next highest
+      level of precedence. This continues all the way to the
+      highest precendece level, at which point we evaluate the
+      next terminal, which looks for the operator itself
+      followed by the next *highest* operator. This continues
+      "recursively" all the way back up.
+    * Added some checks for integer overflows and unterminated strings / comments
+    *
+*/
+
 //options { DEBUG_PARSER=true; }  /* Show debugging info */
 
 PARSER_BEGIN(mjRawGrammar)
@@ -128,8 +155,16 @@ void ClassDecl(): {}
 */
 void MethodDecl(): {}
 {
-  LOOKAHEAD(2) "public" ExtType() <ID> "(" [Param()] ("," Param())* ")" "{" StmtOrVarDecl() "}"
-| "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")" "{" StmtOrVarDecl() "}"
+  "public" MethodDeclLeftFactor()
+
+  //"public" ExtType() <ID> "(" [Param()] ("," Param())* ")" "{" StmtOrVarDecl() "}"
+  //| "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")" "{" StmtOrVarDecl() "}"
+}
+
+void MethodDeclLeftFactor(): {}
+{
+  ExtType() <ID> "(" [Param()] ("," Param())* ")" "{" StmtOrVarDecl() "}"
+| "static" "void" "main" "(" "String" "[" "]" <ID> ")" "{" StmtOrVarDecl() "}"
 }
 
 void StmtOrVarDecl(): {}
@@ -229,7 +264,7 @@ void InitExpr(): {}
 void InitExprLeftFactor(): {}
 {
   BasicType() "[" <INTLIT> "]"
-| LOOKAHEAD(2) <ID> "(" ")"
+| <ID> "(" ")"
 }
 
 /* Original:
@@ -267,15 +302,6 @@ void H(): {}
 | Literal()
 }
 
-/* Original:
- * Lvalue -> ExtId "[" Expr "]"
- *           | ExtId
- */
-void Lvalue(): {}
-{
-  ExtId() ["[" Expr() "]"]
-}
-
 // ExtId -> ["this" "."] <ID> {"." <ID>}
 //
 void ExtId(): {}
@@ -288,15 +314,6 @@ void ExtId(): {}
 void Literal(): {}
 {
   <INTLIT> | "true" | "false"
-}
-
-// BinOp -> "+" | "-" | "*" | "/" | "&&" | "||"
-//       |  "==" | "!=" | "<" | "<=" | ">" | ">="
-//
-void BinOp(): {}
-{
-  "+"  | "-"  | "*" | "/"  | "&&" | "||"
-| "==" | "!=" | "<" | "<=" | ">"  | ">="
 }
 
 // UnOp -> "-" | "!"

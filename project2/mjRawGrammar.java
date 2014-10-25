@@ -93,8 +93,16 @@ public class mjRawGrammar implements mjRawGrammarConstants {
  *                 "{" {VarDecl} {Stmt} "}" 
 */
   static final public void MethodDecl() throws ParseException {
-    if (jj_2_1(2)) {
-      jj_consume_token(12);
+    jj_consume_token(12);
+    MethodDeclLeftFactor();
+  }
+
+  static final public void MethodDeclLeftFactor() throws ParseException {
+    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+    case 13:
+    case 14:
+    case 15:
+    case ID:
       ExtType();
       jj_consume_token(ID);
       jj_consume_token(52);
@@ -125,35 +133,32 @@ public class mjRawGrammar implements mjRawGrammarConstants {
       jj_consume_token(56);
       StmtOrVarDecl();
       jj_consume_token(57);
-    } else {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case 12:
-        jj_consume_token(12);
-        jj_consume_token(11);
-        jj_consume_token(13);
-        jj_consume_token(22);
-        jj_consume_token(52);
-        jj_consume_token(23);
-        jj_consume_token(54);
-        jj_consume_token(55);
-        jj_consume_token(ID);
-        jj_consume_token(53);
-        jj_consume_token(56);
-        StmtOrVarDecl();
-        jj_consume_token(57);
-        break;
-      default:
-        jj_la1[6] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
+      break;
+    case 11:
+      jj_consume_token(11);
+      jj_consume_token(13);
+      jj_consume_token(22);
+      jj_consume_token(52);
+      jj_consume_token(23);
+      jj_consume_token(54);
+      jj_consume_token(55);
+      jj_consume_token(ID);
+      jj_consume_token(53);
+      jj_consume_token(56);
+      StmtOrVarDecl();
+      jj_consume_token(57);
+      break;
+    default:
+      jj_la1[6] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
     }
   }
 
   static final public void StmtOrVarDecl() throws ParseException {
     label_5:
     while (true) {
-      if (jj_2_2(2)) {
+      if (jj_2_1(2)) {
         ;
       } else {
         break label_5;
@@ -312,7 +317,7 @@ public class mjRawGrammar implements mjRawGrammarConstants {
     case 17:
     case ID:
       ExtId();
-      if (jj_2_3(2)) {
+      if (jj_2_2(2)) {
         jj_consume_token(52);
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
         case 17:
@@ -510,16 +515,15 @@ public class mjRawGrammar implements mjRawGrammarConstants {
       jj_consume_token(INTLIT);
       jj_consume_token(55);
       break;
+    case ID:
+      jj_consume_token(ID);
+      jj_consume_token(52);
+      jj_consume_token(53);
+      break;
     default:
       jj_la1[24] = jj_gen;
-      if (jj_2_4(2)) {
-        jj_consume_token(ID);
-        jj_consume_token(52);
-        jj_consume_token(53);
-      } else {
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
+      jj_consume_token(-1);
+      throw new ParseException();
     }
   }
 
@@ -930,78 +934,13 @@ public class mjRawGrammar implements mjRawGrammarConstants {
     finally { jj_save(1, xla); }
   }
 
-  static private boolean jj_2_3(int xla) {
-    jj_la = xla; jj_lastpos = jj_scanpos = token;
-    try { return !jj_3_3(); }
-    catch(LookaheadSuccess ls) { return true; }
-    finally { jj_save(2, xla); }
-  }
-
-  static private boolean jj_2_4(int xla) {
-    jj_la = xla; jj_lastpos = jj_scanpos = token;
-    try { return !jj_3_4(); }
-    catch(LookaheadSuccess ls) { return true; }
-    finally { jj_save(3, xla); }
-  }
-
-  static private boolean jj_3R_26() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(14)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(15)) return true;
-    }
-    return false;
-  }
-
-  static private boolean jj_3R_20() {
-    if (jj_3R_23()) return true;
-    return false;
-  }
-
-  static private boolean jj_3_1() {
-    if (jj_scan_token(12)) return true;
-    if (jj_3R_18()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_36() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(36)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(41)) return true;
-    }
-    return false;
-  }
-
-  static private boolean jj_3R_35() {
+  static private boolean jj_3R_33() {
     Token xsp;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_36()) { jj_scanpos = xsp; break; }
+      if (jj_3R_34()) { jj_scanpos = xsp; break; }
     }
-    if (jj_3R_37()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_34() {
     if (jj_3R_35()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_33() {
-    if (jj_3R_34()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_29() {
-    if (jj_scan_token(54)) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_40() {
-    if (jj_3R_42()) return true;
     return false;
   }
 
@@ -1011,16 +950,7 @@ public class mjRawGrammar implements mjRawGrammarConstants {
   }
 
   static private boolean jj_3R_27() {
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_29()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  static private boolean jj_3R_39() {
-    if (jj_scan_token(52)) return true;
+    if (jj_scan_token(54)) return true;
     return false;
   }
 
@@ -1030,19 +960,15 @@ public class mjRawGrammar implements mjRawGrammarConstants {
   }
 
   static private boolean jj_3R_38() {
-    if (jj_3R_41()) return true;
+    if (jj_3R_40()) return true;
     return false;
   }
 
-  static private boolean jj_3R_37() {
+  static private boolean jj_3R_25() {
     Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_38()) {
-    jj_scanpos = xsp;
-    if (jj_3R_39()) {
-    jj_scanpos = xsp;
-    if (jj_3R_40()) return true;
-    }
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_27()) { jj_scanpos = xsp; break; }
     }
     return false;
   }
@@ -1052,68 +978,86 @@ public class mjRawGrammar implements mjRawGrammarConstants {
     return false;
   }
 
-  static private boolean jj_3R_28() {
+  static private boolean jj_3R_37() {
+    if (jj_scan_token(52)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_29() {
     if (jj_3R_30()) return true;
     return false;
   }
 
-  static private boolean jj_3R_22() {
+  static private boolean jj_3R_36() {
+    if (jj_3R_39()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_35() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_24()) {
+    if (jj_3R_36()) {
+    jj_scanpos = xsp;
+    if (jj_3R_37()) {
+    jj_scanpos = xsp;
+    if (jj_3R_38()) return true;
+    }
+    }
+    return false;
+  }
+
+  static private boolean jj_3R_28() {
+    if (jj_3R_29()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_26() {
+    if (jj_3R_28()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_22() {
+    if (jj_3R_24()) return true;
+    if (jj_3R_25()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_20() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_22()) {
     jj_scanpos = xsp;
     if (jj_scan_token(34)) return true;
     }
     return false;
   }
 
-  static private boolean jj_3R_24() {
-    if (jj_3R_26()) return true;
-    if (jj_3R_27()) return true;
+  static private boolean jj_3R_21() {
+    if (jj_3R_23()) return true;
     return false;
   }
 
-  static private boolean jj_3R_23() {
-    if (jj_3R_25()) return true;
-    return false;
-  }
-
-  static private boolean jj_3_3() {
+  static private boolean jj_3_2() {
     if (jj_scan_token(52)) return true;
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_20()) jj_scanpos = xsp;
+    if (jj_3R_19()) jj_scanpos = xsp;
     if (jj_scan_token(53)) return true;
     return false;
   }
 
-  static private boolean jj_3R_21() {
-    if (jj_3R_22()) return true;
-    return false;
-  }
-
   static private boolean jj_3R_18() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_21()) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(13)) return true;
-    }
-    return false;
-  }
-
-  static private boolean jj_3R_19() {
-    if (jj_3R_22()) return true;
+    if (jj_3R_20()) return true;
     if (jj_scan_token(ID)) return true;
     return false;
   }
 
-  static private boolean jj_3R_25() {
-    if (jj_3R_28()) return true;
+  static private boolean jj_3R_23() {
+    if (jj_3R_26()) return true;
     return false;
   }
 
-  static private boolean jj_3R_42() {
+  static private boolean jj_3R_40() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_scan_token(31)) {
@@ -1126,27 +1070,46 @@ public class mjRawGrammar implements mjRawGrammarConstants {
     return false;
   }
 
-  static private boolean jj_3R_43() {
+  static private boolean jj_3R_41() {
     if (jj_scan_token(17)) return true;
     return false;
   }
 
-  static private boolean jj_3R_41() {
+  static private boolean jj_3R_39() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_43()) jj_scanpos = xsp;
+    if (jj_3R_41()) jj_scanpos = xsp;
     if (jj_scan_token(ID)) return true;
     return false;
   }
 
-  static private boolean jj_3_2() {
-    if (jj_3R_19()) return true;
+  static private boolean jj_3_1() {
+    if (jj_3R_18()) return true;
     return false;
   }
 
-  static private boolean jj_3_4() {
-    if (jj_scan_token(ID)) return true;
-    if (jj_scan_token(52)) return true;
+  static private boolean jj_3R_24() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(14)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(15)) return true;
+    }
+    return false;
+  }
+
+  static private boolean jj_3R_19() {
+    if (jj_3R_21()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_34() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(36)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(41)) return true;
+    }
     return false;
   }
 
@@ -1170,12 +1133,12 @@ public class mjRawGrammar implements mjRawGrammarConstants {
       jj_la1_init_1();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0x200,0x400,0xc000,0x1000,0xc000,0x0,0x1000,0x4360000,0x0,0xe000,0xc000,0x0,0xc000,0x4360000,0x83020000,0x0,0x0,0x80000,0x83020000,0x83020000,0x4360000,0x0,0x83020000,0x83030000,0xc000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x83020000,0x0,0x0,0x83020000,0x0,0x20000,0x0,0x83000000,0x0,0x0,};
+      jj_la1_0 = new int[] {0x200,0x400,0xc000,0x1000,0xc000,0x0,0xe800,0x4360000,0x0,0xe000,0xc000,0x0,0xc000,0x4360000,0x83020000,0x0,0x0,0x80000,0x83020000,0x83020000,0x4360000,0x0,0x83020000,0x83030000,0xc000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x83020000,0x0,0x0,0x83020000,0x0,0x20000,0x0,0x83000000,0x0,0x0,};
    }
    private static void jj_la1_init_1() {
-      jj_la1_1 = new int[] {0x0,0x0,0x4,0x0,0x4,0x40000,0x0,0x1000004,0x10000,0x4,0x4,0x400000,0x0,0x1000004,0x100214,0x400000,0x410000,0x0,0x100215,0x100214,0x1000004,0x40000,0x100215,0x100214,0x0,0x100,0x80,0xc00,0xc00,0xf000,0xf000,0x18,0x18,0x60,0x60,0x210,0x210,0x100214,0x500000,0x500000,0x100004,0x400000,0x0,0x80000,0x0,0xfdf8,0x210,};
+      jj_la1_1 = new int[] {0x0,0x0,0x4,0x0,0x4,0x40000,0x4,0x1000004,0x10000,0x4,0x4,0x400000,0x0,0x1000004,0x100214,0x400000,0x410000,0x0,0x100215,0x100214,0x1000004,0x40000,0x100215,0x100214,0x4,0x100,0x80,0xc00,0xc00,0xf000,0xf000,0x18,0x18,0x60,0x60,0x210,0x210,0x100214,0x500000,0x500000,0x100004,0x400000,0x0,0x80000,0x0,0xfdf8,0x210,};
    }
-  static final private JJCalls[] jj_2_rtns = new JJCalls[4];
+  static final private JJCalls[] jj_2_rtns = new JJCalls[2];
   static private boolean jj_rescan = false;
   static private int jj_gc = 0;
 
@@ -1427,7 +1390,7 @@ public class mjRawGrammar implements mjRawGrammarConstants {
 
   static private void jj_rescan_token() {
     jj_rescan = true;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 2; i++) {
     try {
       JJCalls p = jj_2_rtns[i];
       do {
@@ -1436,8 +1399,6 @@ public class mjRawGrammar implements mjRawGrammarConstants {
           switch (i) {
             case 0: jj_3_1(); break;
             case 1: jj_3_2(); break;
-            case 2: jj_3_3(); break;
-            case 3: jj_3_4(); break;
           }
         }
         p = p.next;
