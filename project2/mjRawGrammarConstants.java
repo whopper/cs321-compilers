@@ -17,6 +17,8 @@ public interface mjRawGrammarConstants {
   /** RegularExpression Id. */
   int STRLIT = 32;
   /** RegularExpression Id. */
+  int UNTERM_STRLIT = 33;
+  /** RegularExpression Id. */
   int ID = 34;
 
   /** Lexical state. */
@@ -57,7 +59,7 @@ public interface mjRawGrammarConstants {
     "<LETTER>",
     "<INTLIT>",
     "<STRLIT>",
-    "<token of kind 33>",
+    "<UNTERM_STRLIT>",
     "<ID>",
     "\"+\"",
     "\"-\"",
@@ -82,7 +84,6 @@ public interface mjRawGrammarConstants {
     "\"]\"",
     "\"{\"",
     "\"}\"",
-    "\"<=|>|>=\"",
   };
 
 }

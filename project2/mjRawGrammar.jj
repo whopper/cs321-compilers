@@ -9,7 +9,7 @@
 //
 //
 
-// options { DEBUG_PARSER=true; }  /* Show debugging info */
+//options { DEBUG_PARSER=true; }  /* Show debugging info */
 
 PARSER_BEGIN(mjRawGrammar)
 import java.io.*;
@@ -70,18 +70,22 @@ TOKEN : /* Integer literals */
     {
       /* Detect integer overflow */
       try {
-        Integer.parseInt(image);
-      } catch(NumberFormatError e) {
-        throw new TokenMgrError("Integer overflow: " + image, 0);
+        Integer.parseInt(matchedToken.image);
+      } catch(NumberFormatException e) {
+        throw new TokenMgrError("Lexical error: Integer overflow: line "
+          + matchedToken.beginLine + ", column " + matchedToken.beginColumn
+          + ", lexeme: " + matchedToken.image, 0); /* Detect integer overflow */
       }
     }
 }
 
-TOKEN : /* String literals  -- error detection not included */
+TOKEN : /* String literals  */
 {
   <STRLIT: ("\"" (~["\"","\n"])* "\"")>
-| <("\"" (~["\"", "\n"])*)>
-  { if (true) throw new TokenMgrError("Unterminated string"); } /* Detect unterm. strings */
+| <UNTERM_STRLIT: ("\"" (~["\"", "\n"])*)>
+  { if (true) throw new TokenMgrError("Lexical error: Unterminated string: line "
+        + matchedToken.beginLine + ", column " + matchedToken.beginColumn
+        + ", lexeme: " + matchedToken.image, 0); } /* Detect unterm. strings */
 }
 
 TOKEN : /* Identifiers */
@@ -124,10 +128,13 @@ void ClassDecl(): {}
 */
 void MethodDecl(): {}
 {
-  "public" ExtType() <ID> "(" [Param() ("," Param())*] ")"
-          "{" (VarDecl())* (Stmt())* "}"
-| "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")"
-          "{" (VarDecl())* (Stmt())* "}"
+  LOOKAHEAD(2) "public" ExtType() <ID> "(" [Param()] ("," Param())* ")" "{" StmtOrVarDecl() "}"
+| "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")" "{" StmtOrVarDecl() "}"
+}
+
+void StmtOrVarDecl(): {}
+{
+  (LOOKAHEAD(2) VarDecl())* (Stmt())*
 }
 
 // Param -> Type <ID>
@@ -151,15 +158,19 @@ void ExtType(): {}
   Type() | "void"
 }
 
-// Type -> BasicType 
+// Type -> BasicType
 //      |  BasicType "[" "]"
 //      |  <ID>
 //
 void Type(): {}
 {
-  BasicType()
-| BasicType() "[" "]"
+  BasicType() TypeLeftFactor()
 | <ID>
+}
+
+void TypeLeftFactor(): {}
+{
+  ("[" "]")*
 }
 
 // BasicType -> "int" | "boolean"
@@ -179,12 +190,15 @@ void BasicType(): {}
 //
 void Stmt(): {}
 {
+  /* I ripped out Lvalue() calls here as they were causing annoying
+     indirect left recursion, which seems like more trouble than it's
+     worth in this case. I just brought its productions here directly
+  */
   "{" (Stmt())* "}"
-| ExtId() "(" [Args()] ")" ";"
-| Lvalue() "=" InitExpr() ";"
+| ExtId() (LOOKAHEAD(2) ("(" [Args()] ")" ";") | (["[" Expr() "]"] "=" InitExpr() ";"))
 | "if" "(" Expr() ")" Stmt() ["else" Stmt()]
 | "while" "(" Expr() ")" Stmt()
-| "System" "." "out" "." "println" "(" [ PrintArg() ] ")" ";"  
+| "System" "." "out" "." "println" "(" [ PrintArg() ] ")" ";"
 | "return" [Expr()] ";"
 }
 
@@ -208,9 +222,14 @@ void PrintArg(): {}
 //
 void InitExpr(): {}
 {
-  "new" BasicType() "[" <INTLIT> "]"
-| "new" <ID> "(" ")"
+  "new" InitExprLeftFactor()
 | Expr()
+}
+
+void InitExprLeftFactor(): {}
+{
+  BasicType() "[" <INTLIT> "]"
+| LOOKAHEAD(2) <ID> "(" ")"
 }
 
 /* Original:
@@ -229,21 +248,23 @@ void Expr(): {}
 /*  Operator precedence functions
  *  Needed to remove ambiguity from Expr()
  */
-void A(): {} { B() (("+"|"-") B())* }
-void B(): {} { C() (("*"|"/") C())* }
-void C(): {} { D() (("<"|"<=|>|>=") D())* }
-void D(): {} { E() (("=="|"!=") E())* }
-void E(): {} { F() (("&&") F())* }
-void F(): {} { G() (("||") G())* }
-void G(): {} { ("!")? H() }
-void H(): {} { ("-")? I() }
 
-void I(): {}
+void A(): {} {B() (("||") B())* }
+void B(): {} {C() (("&&") C())* }
+void C(): {} {D() (("=="|"!=") D())* }
+void D(): {} {E() (("<"|"<="|">"|">=") E())* }
+void E(): {} {F() (("+"|"-") F())* }
+void F(): {} {G() (("*"|"/") G())* }
+void G(): {} {("-"|"!")* H() }
+
+void H(): {}
 {
-  "(" Expr() ")"
-  | ExtId() "(" [Args()] ")"
-  | Lvalue()
-  | Literal()
+  /* I ripped out Lvalue() calls here because they were causing
+     indirect left recursion, and it was easier to bring its 
+     productions here directly */
+  ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
+| "(" Expr() ")"
+| Literal()
 }
 
 /* Original:

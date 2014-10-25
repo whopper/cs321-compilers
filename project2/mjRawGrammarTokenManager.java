@@ -27,11 +27,8 @@ private static final int jjStopStringLiteralDfa_0(int pos, long active0)
             return 2;
          if ((active0 & 0x1ffbfe00L) != 0L)
          {
-            if (jjmatchedPos != 1)
-            {
-               jjmatchedKind = 34;
-               jjmatchedPos = 1;
-            }
+            jjmatchedKind = 34;
+            jjmatchedPos = 1;
             return 2;
          }
          return -1;
@@ -118,7 +115,7 @@ static private int jjMoveStringLiteralDfa0_0()
          return jjStopAtPos(0, 49);
       case 60:
          jjmatchedKind = 44;
-         return jjMoveStringLiteralDfa1_0(0x400200000000000L);
+         return jjMoveStringLiteralDfa1_0(0x200000000000L);
       case 61:
          jjmatchedKind = 48;
          return jjMoveStringLiteralDfa1_0(0x40000000000L);
@@ -188,13 +185,10 @@ static private int jjMoveStringLiteralDfa1_0(long active0)
          else if ((active0 & 0x80000000000L) != 0L)
             return jjStopAtPos(1, 43);
          else if ((active0 & 0x200000000000L) != 0L)
-         {
-            jjmatchedKind = 45;
-            jjmatchedPos = 1;
-         }
+            return jjStopAtPos(1, 45);
          else if ((active0 & 0x800000000000L) != 0L)
             return jjStopAtPos(1, 47);
-         return jjMoveStringLiteralDfa2_0(active0, 0x400000000000000L);
+         break;
       case 97:
          return jjMoveStringLiteralDfa2_0(active0, 0x2400000L);
       case 101:
@@ -267,8 +261,6 @@ static private int jjMoveStringLiteralDfa2_0(long old0, long active0)
          if ((active0 & 0x10000L) != 0L)
             return jjStartNfaWithStates_0(2, 16, 2);
          break;
-      case 124:
-         return jjMoveStringLiteralDfa3_0(active0, 0x400000000000000L);
       default :
          break;
    }
@@ -285,8 +277,6 @@ static private int jjMoveStringLiteralDfa3_0(long old0, long active0)
    }
    switch(curChar)
    {
-      case 62:
-         return jjMoveStringLiteralDfa4_0(active0, 0x400000000000000L);
       case 100:
          if ((active0 & 0x2000L) != 0L)
             return jjStartNfaWithStates_0(3, 13, 2);
@@ -347,8 +337,6 @@ static private int jjMoveStringLiteralDfa4_0(long old0, long active0)
          break;
       case 116:
          return jjMoveStringLiteralDfa5_0(active0, 0x10000000L);
-      case 124:
-         return jjMoveStringLiteralDfa5_0(active0, 0x400000000000000L);
       default :
          break;
    }
@@ -365,8 +353,6 @@ static private int jjMoveStringLiteralDfa5_0(long old0, long active0)
    }
    switch(curChar)
    {
-      case 62:
-         return jjMoveStringLiteralDfa6_0(active0, 0x400000000000000L);
       case 97:
          return jjMoveStringLiteralDfa6_0(active0, 0x8000L);
       case 99:
@@ -407,10 +393,6 @@ static private int jjMoveStringLiteralDfa6_0(long old0, long active0)
    }
    switch(curChar)
    {
-      case 61:
-         if ((active0 & 0x400000000000000L) != 0L)
-            return jjStopAtPos(6, 58);
-         break;
       case 110:
          if ((active0 & 0x8000L) != 0L)
             return jjStartNfaWithStates_0(6, 15, 2);
@@ -700,14 +682,14 @@ public static final String[] jjstrLiteralImages = {
 "\123\171\163\164\145\155", "\157\165\164", "\160\162\151\156\164\154\156", null, null, null, null, null, 
 null, "\53", "\55", "\52", "\57", "\46\46", "\174\174", "\41", "\75\75", "\41\75", 
 "\74", "\74\75", "\76", "\76\75", "\75", "\73", "\54", "\56", "\50", "\51", "\133", 
-"\135", "\173", "\175", "\74\75\174\76\174\76\75", };
+"\135", "\173", "\175", };
 
 /** Lexer state names. */
 public static final String[] lexStateNames = {
    "DEFAULT",
 };
 static final long[] jjtoToken = {
-   0x7ffffff9ffffe01L, 
+   0x3ffffff9ffffe01L, 
 };
 static final long[] jjtoSkip = {
    0x1feL, 
@@ -886,14 +868,18 @@ static void TokenLexicalActions(Token matchedToken)
         image.append(input_stream.GetSuffix(jjimageLen + (lengthOfMatch = jjmatchedPos + 1)));
       /* Detect integer overflow */
       try {
-        Integer.parseInt(image);
-      } catch(NumberFormatError e) {
-        throw new TokenMgrError("Integer overflow: " + image, 0);
+        Integer.parseInt(matchedToken.image);
+      } catch(NumberFormatException e) {
+        throw new TokenMgrError("Lexical error: Integer overflow: line "
+          + matchedToken.beginLine + ", column " + matchedToken.beginColumn
+          + ", lexeme: " + matchedToken.image, 0); /* Detect integer overflow */
       }
          break;
       case 33 :
         image.append(input_stream.GetSuffix(jjimageLen + (lengthOfMatch = jjmatchedPos + 1)));
-    if (true) throw new TokenMgrError("Unterminated string");
+    if (true) throw new TokenMgrError("Lexical error: Unterminated string: line "
+        + matchedToken.beginLine + ", column " + matchedToken.beginColumn
+        + ", lexeme: " + matchedToken.image, 0);
          break;
       default :
          break;
