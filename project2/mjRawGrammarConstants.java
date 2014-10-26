@@ -9,20 +9,22 @@ public interface mjRawGrammarConstants {
   /** End of File. */
   int EOF = 0;
   /** RegularExpression Id. */
-  int DIGIT = 29;
+  int DIGIT = 30;
   /** RegularExpression Id. */
-  int LETTER = 30;
+  int LETTER = 31;
   /** RegularExpression Id. */
-  int INTLIT = 31;
+  int INTLIT = 32;
   /** RegularExpression Id. */
-  int STRLIT = 32;
+  int STRLIT = 33;
   /** RegularExpression Id. */
-  int UNTERM_STRLIT = 33;
+  int UNTERM_STRLIT = 34;
   /** RegularExpression Id. */
-  int ID = 34;
+  int ID = 35;
 
   /** Lexical state. */
   int DEFAULT = 0;
+  /** Lexical state. */
+  int MULTILINECOMMENT = 1;
 
   /** Literal token values. */
   String[] tokenImage = {
@@ -33,8 +35,9 @@ public interface mjRawGrammarConstants {
     "\"\\r\"",
     "\"\\f\"",
     "<token of kind 6>",
-    "<token of kind 7>",
+    "\"/*\"",
     "<token of kind 8>",
+    "\"*/\"",
     "\"class\"",
     "\"extends\"",
     "\"static\"",

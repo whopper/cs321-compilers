@@ -73,9 +73,19 @@ SKIP : /* White space */
 SKIP : /* Comments -- multi-line form and error detection not included */
 {
   <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
-| <"/*" ( ~["*"] | (["*"])+ (~["/"]) )* (["*"])+ "/">
-| <"/*" ( ~["*"] | (["*"])+ (~["/"]) )* (["*"])+ >
-  { if (true) throw new TokenMgrError("Unterminated multi-line comments ", 0); }
+| "/*" : MULTILINECOMMENT // Here we enter multiline comment state
+}
+
+// Allows us to catch unterminated comments
+<MULTILINECOMMENT> MORE:
+{
+  <~[]>
+}
+
+// Rules for inside of multiline comment state
+<MULTILINECOMMENT> SKIP :
+{
+  "*/" : DEFAULT // Back to the default state
 }
 
 TOKEN : /* Keywords */
