@@ -6,5 +6,5 @@ Dir.foreach(dir) do |item|
   next if item == '.' or item == '..'
 
   puts "Test: #{item}\n"
-  system("java mjRawGrammar #{dir}/#{item}")
+  system("java mjParser0 #{dir}/#{item}")
 end
