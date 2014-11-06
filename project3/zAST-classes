@@ -1,0 +1,53 @@
+#### Base (Node) ####
+Node
+----> Program(ClassDecl[])
+          or (List of ClassDecl)
+----> ClassDecl(classname, parent class, VarDecl[] fields, MethodDecl[] methods)
+            or (classname, parent class, list of VarDecls, list of MethodDecls)
+----> MethodDecl(returntype, name, param[] params, VarDecl[] localvars,
+                 Stmt[] methodbody)
+             or (returntype, name, list of params, list of VarDecls, list of Stmts)
+----> VarDecl(type, name, init expr (possibly null))
+----> Param(type, name)
+----> StrLit(string TheString)
+
+###### Statements ######
+----> Stmt
+--------> Block(Stmt[])
+            or (List of Stmts)
+--------> Assign(Right hand Exp, Left hand Exp)
+--------> CallStmt(Exp classObject, methodname, Exp[] arguments)
+--------> If(Exp condition, Stmt1 thenClause, Stmt2 elseClause (possibly null))
+--------> While(Exp condition, Stmt toDo)
+--------> Print(PrArg toPrint (possibly null))
+--------> Return(Exp toReturn (possibly null))
+
+#### PrArg ####
+----> interface PrArg {}
+
+#### Expressions ####
+----> Exp implements PrArg {}
+--------> Binop(BOP operator, Exp1, Exp2)
+--------> Unop(UOP operator, Exp)
+--------> Call(Exp classObj, methodName, Exp[] arguments)
+           or (Exp classObj, methodName, list of Exp aguments)
+--------> NewArray(type, int length)
+--------> ArrayElm(Exp arrayObject, Exp elementIndex)
+--------> NewObj(className)
+--------> Field(Exp classObject, fieldName)
+--------> Id(IdName)
+--------> This (no constructor args, just returns "this")
+--------> IntLit(int theInt)
+--------> BoolLit(boolean theBool)
+
+###### Types ######
+Type < Node
+
+----> IntType
+----> BoolType
+----> ArrayType(type)
+----> ObjType(classname)
+
+#### Operators ####
+----> BOP(string name)
+----> UOP(string name)
