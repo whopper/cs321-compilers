@@ -118,7 +118,6 @@ Ast.Program Program():
 { List<Ast.ClassDecl> cl = new ArrayList<Ast.ClassDecl>();
   Ast.ClassDecl c; }
 {
-  { System.out.println("IN PROGRAM"); }
   ( c=ClassDecl() {cl.add(c);} )* <EOF>
   { return new Ast.Program(cl); }
 }
@@ -178,7 +177,7 @@ Ast.MethodDecl MethodDecl():
            Ast.Type tempType = new Ast.ObjType("String");
            Ast.Type paramType = new Ast.ArrayType(tempType);
            p = new Ast.Param(paramType, tkn.image);
-           plist.add(p);
+           //plist.add(p);
            return new Ast.MethodDecl(null, "main", plist, vlist, slist);
         }
 }
@@ -427,12 +426,16 @@ Ast.Exp G(): {Ast.Exp e; Token tkn=null;}
 Ast.Exp H():
 {
   Token tkn;
-  Ast.Exp e;
+  Ast.Exp e, eArg, eExpr;
   boolean b;
   int i;
 }
 {
-  LOOKAHEAD(2) ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
+  //LOOKAHEAD(2) ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
+  LOOKAHEAD(2) e=ExtId() { return e; }
+| LOOKAHEAD(2) ExtId() "(" [Args()] ")" // Call?
+| LOOKAHEAD(2) e=ExtId() "[" Expr() "]" // Array elements
+| LOOKAHEAD(2) ExtId() "(" [Args()] ")" "[" Expr() "]"
 | "(" e=Expr() ")" { return e; }
 | i=IntLit()       { return new Ast.IntLit(i);  }
 | b=BoolLit()      { return new Ast.BoolLit(b); }
@@ -441,15 +444,18 @@ Ast.Exp H():
 
 // ExtId -> ["this" "."] <ID> {"." <ID>}
 //
-void ExtId():
+Ast.Exp ExtId():
 {
   Token tkn;
+  Ast.Exp e;
 }
 {
   // this . <ID>        indicates a Call
   // <ID> . <ID>        indicates a field
   // this . <ID> . <ID> indicates ???
-  ["this" "."] <ID> ("." <ID>)*
+  // ["this" "."] <ID> ("." <ID>)*
+  "this" "." e=<ID>                    { return new Ast.This();             }
+| ["this" "."] e=<ID> ("." tkn=<ID>)*  { return new Ast.Field(e, tkn.image); }
 }
 
 int IntLit(): {Token tkn;}
