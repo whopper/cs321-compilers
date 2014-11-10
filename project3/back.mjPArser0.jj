@@ -1,0 +1,271 @@
+// This is supporting software for CS321 Compilers and Language Design I
+// Copyright (c) Portland State University
+//
+//----------------------------------------------------------------------
+// miniJava (F14) LL(2) Parser (A starting version.)
+//
+// (For CS321 Fall 2014 - Jingke Li)
+//----------------------------------------------------------------------
+//
+//
+
+// options { DEBUG_PARSER=true; }  /* Show debugging info */
+
+PARSER_BEGIN(mjParser)
+import java.util.*;
+import java.io.*;
+import ast.*;
+
+public class mjParser {
+  public static void main(String [] args) {
+    try {
+      if (args.length == 1) {
+        FileInputStream stream = new FileInputStream(args[0]);
+        Ast.Program p = new mjParser(stream).Program();
+        stream.close();
+        System.out.print(p);
+      } else {
+        System.out.println("Need a file name as command-line argument.");
+      }
+    } catch (TokenMgrError e) {
+      System.err.println(e);
+    } catch (Exception e) {
+      System.err.println(e);
+    }
+  }
+}
+PARSER_END(mjParser)
+
+//
+// LEXER SECTION ---------------------------------------------------------------
+//
+
+SKIP : /* White space */
+{
+  " " | "\t" | "\n" | "\r" | "\f"
+}
+
+SKIP : /* Comments */
+{
+  <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>                     // Single-line
+| <"/*" ( (~["*"])+ | (["*"])+ (~["*","/"]) )* (["*"])* "*/">   // Multi-line
+| <"/*" ( (~["*"])+ | (["*"])+ (~["*","/"]) )* (["*"])*>        // Non-ending
+    { if (true) throw new TokenMgrError("Unterminated block comments ", 0); }
+}
+
+TOKEN : /* Reserved keywords */
+{
+  "class" | "extends" | "static" | "public" | "void" | "int" | "boolean"
+| "new" | "this" | "if" | "else" | "while" | "return" | "main" | "String" 
+| "true" | "false" | "System" | "out" | "println" 
+}
+
+TOKEN : /* Literals and Ids */
+{
+  <#DIGIT:  ["0"-"9"]>
+| <#LETTER: (["A"-"Z"]|["a"-"z"])>
+| <INTLIT: (<DIGIT>)+>                    /* Integer literals */
+| <STRLIT: ("\"" (~["\"","\n"])* "\"")>	  /* String literals */
+| <ID: <LETTER> (<LETTER>|<DIGIT>)*>      /* Identifiers */
+}
+
+TOKEN : /* Operators and delimiters */
+{
+   "+" | "-" | "*" | "/" | "&&" | "||" | "!" 
+|  "==" | "!=" | "<" | "<=" | ">" | ">="
+|  "=" | ";" | "," | "." | "(" | ")" | "[" | "]" | "{" | "}"
+}
+
+//
+// PARSER SECTION ---------------------------------------------------------------
+//
+
+// Program -> {ClassDecl}
+// Original: (ClassDecl())* <EOF>
+Ast.Program Program():
+{ List<Ast.ClassDecl> cl = new ArrayList<Ast.ClassDecl>();
+  Ast.ClassDecl c; }
+{
+  ( c=ClassDecl() {cl.add(c);} )* <EOF>
+  { return new Ast.Program(cl); }
+}
+
+// ClassDecl -> "class" <ID> ["extends" <ID>] "{" {VarDecl} {MethodDecl} "}"
+// Original: "class" <ID> ["extends" <ID>] "{" (VarDecl())* (MethodDecl())* "}"
+Ast.ClassDecl ClassDecl():
+{ String cn;
+  String pc;
+  List<Ast.VarDecl> vdl = new ArrayList<Ast.VarDecl>();
+  List<Ast.MethodDecl> mdl = new ArrayList<Ast.MethodDecl>();
+  Ast.VarDecl v;
+  Ast.MethodDecl m; }
+{
+  "class" cn=<ID> ["extends" <ID>] "{" (v=VarDecl() {vdl.add(v);})*
+                                       (m=MethodDecl() {mdl.add(m);})*
+  { return new Ast.ClassDecl(cn, pc, vdl, mdl); }
+}
+
+
+/* Original:
+ * MethodDecl -> "public" ExtType <ID> "(" [Param {"," Param}] ")"
+ *                 "{" {VarDecl} {Stmt} "}"
+ *            |  "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")"
+ *                 "{" {VarDecl} {Stmt} "}"
+*/
+Ast.MethodDecl MethodDecl():
+{
+{ Ast.Type t;
+  String nm;
+  List<Ast.Param> prl = new ArrayList<Ast.Param>();
+  List<Ast.VarDecl> vdl = new ArrayList<Ast.VarDecl>();
+  List<Ast.Stmt> stl = new ArrayList<Ast.Stmt>();
+  Ast.Param p;
+  Ast.VarDecl v;
+  Ast.Stmt s; }
+}
+{
+  LOOKAHEAD(2) "public" t=ExtType() nm=<ID> "(" [p=Param() {prl.add(p);}]
+                                             ("," p=Param() {prl.add(p);} )* ")"
+                                            "{" (LOOKAHEAD(2) v=VarDecl() {vdl.add(v);})*
+                                             (s=Stmt() {stl.add(s);})* "}"
+    { return new Ast.MethodDecl(t, nm, prl, vdl, stl); }
+| "public" "static" "void" "main" "(" "String" "[" "]" nm=<ID> ")"
+  "{" (LOOKAHEAD(2) v=VarDecl() {vdl.add(v);})* (s=Stmt() {stl.add(s);})* "}"
+    { p = Ast.Param(new Ast.ArrayType(new Ast.ObjType("String")), nm);
+      return new Ast.MethodDecl(null, "main", p, vdl, stl);
+    }
+}
+
+// Param -> Type <ID>
+//
+Ast.Param Param(): {Ast.Type t; String nm;}
+{
+  t=Type() nm=<ID>
+  { return new Ast.Param(t, nm); }
+}
+
+// VarDecl -> Type <ID> ["=" InitExpr] ";"
+//
+Ast.VarDecl VarDecl():
+{ Ast.Type t;
+  String nm;
+  Ast.Exp initExpr; }
+{
+  t=Type() nm=<ID> ["=" initExpr=InitExpr()] ";"
+  { return new Ast.VarDecl(t, nm, initExpr); }
+}
+
+// ExtType -> Type | "void"
+//
+Ast.Type ExtType(): {Ast.Type t;}
+{
+  t=Type() { return t; }
+| "void"   { return null; }
+}
+
+// Type -> BasicType
+//      |  BasicType "[" "]"
+//      |  <ID>
+// Like int, int[] or custType
+Ast.Type Type(): { Ast.Type t; Token tkn;}
+{
+  LOOKAHEAD(2) t=BasicType() { return t;}
+| t=BasicType() "[" "]"      { return new Ast.ArrayType(t); }
+| tkn=<ID>                   { return new Ast.ObjType(tkn.image); }
+}
+
+// BasicType -> "int" | "boolean"
+// Will return concrete Ast.IntType or Ast.BoolType
+Ast.Type BasicType(): {}
+{
+  "int"     { return new Ast.IntType(); }
+| "boolean" { return new Ast.BoolType(); }
+}
+
+Ast.Stmt Stmt(): {}
+{
+  "{" (Stmt())* "}"
+| ExtId() (("(" [Args()] ")" ";") | (["[" Expr() "]"] "=" InitExpr() ";"))
+| "if" "(" Expr() ")" Stmt() ["else" Stmt()]
+| "while" "(" Expr() ")" Stmt()
+| "System" "." "out" "." "println" "(" [ PrintArg() ] ")" ";"
+| "return" [Expr()] ";"
+}
+
+// Args -> Expr {"," Expr}
+// Not sure what the concrete return will be
+Ast.Stmt Args(): {}
+{
+  Expr() ("," Expr())*
+}
+
+// PrintArg -> Expr | <STRLIT>
+// Will return concrete Ast.Print
+Ast.Stmt PrintArg(): {}
+{
+  Expr() | <STRLIT>
+}
+
+// InitExpr -> "new" BasicType "[" <INTLIT> "]"
+//          |  "new" <ID> "(" ")"
+//          |  Expr
+//
+Ast.Exp InitExpr(): {}
+{
+  LOOKAHEAD(2) "new" BasicType() "[" <INTLIT> "]"
+| "new" <ID> "(" ")"
+| Expr()
+}
+
+/*
+void InitExprLeftFactor(): {}
+{
+  BasicType() "[" <INTLIT> "]"
+| <ID> "(" ")"
+}
+*/
+
+Ast.Exp Expr(): {}
+{
+  A()
+}
+
+Ast.BOP A(): {} {B() (("||") B())* }
+Ast.BOP B(): {} {C() (("&&") C())* }
+Ast.BOP C(): {} {D() (("=="|"!=") D())* }
+Ast.BOP D(): {} {E() (("<"|"<="|">"|">=") E())* }
+Ast.BOP E(): {} {F() (("+"|"-") F())* }
+Ast.BOP F(): {} {G() (("*"|"/") G())* }
+Ast.BOP G(): {} {("-"|"!")* H() }
+
+Ast.Exp H(): {}
+{
+  LOOKAHEAD(2) ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
+| "(" Expr() ")"
+| ID()
+| IntLit()
+| BoolLit()
+}
+
+// ExtId -> ["this" "."] <ID> {"." <ID>}
+//
+Ast.Exp ExtId(): {}
+{
+  ["this" "."] <ID> ("." <ID>)*
+}
+
+String ID(): {Token tkn;}
+{
+  tkn=<ID> { return new Ast.Id(tkn.image); }
+}
+
+int IntLit(): {Token tkn;}
+{
+  tkn=<INTLIT> { return Integer.parseInt(tkn.image); }
+}
+
+boolean BoolLit(): {Token tkn;}
+{
+  tkn="true"  { return tkn.image; }
+| tkn="false" { return tkn.image; }
+}

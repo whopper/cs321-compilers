@@ -142,7 +142,7 @@ public class Ast {
 
     public ArrayType(Type t) { et=t; }
 
-    public String toString() { 
+    public String toString() {
       return "(ArrayType " + et + ")";
     }
   }

@@ -1,0 +1,346 @@
+//----------------------------------------------------------------------
+// mjParser0.jj
+//
+// (For CS321 Fall 2014 - Will Hopper)
+//----------------------------------------------------------------------
+//
+//
+//options { DEBUG_PARSER=true; }  /* Show debugging info */
+
+PARSER_BEGIN(mjParser)
+import java.util.*;
+import java.io.*;
+import ast.*;
+
+public class mjParser {
+  public static void main(String [] args) {
+    try {
+      if (args.length == 1) {
+        FileInputStream stream = new FileInputStream(args[0]);
+        new mjParser(stream).Program();
+        stream.close();
+        System.out.println("Program's syntax is valid.");
+      } else {
+        System.out.println("Need a file name as command-line argument.");
+      }
+    } catch (TokenMgrError e) {
+      System.err.println(e);
+    } catch (Exception e) {
+      System.err.println(e);
+    }
+  }
+}
+PARSER_END(mjParser)
+
+//
+// LEXER SECTION ---------------------------------------------------------------
+//
+
+SKIP : /* White space */
+{
+  " " | "\t" | "\n" | "\r" | "\f"
+}
+
+SKIP : /* Comments -- multi-line form and error detection not included */
+{
+  <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| "/*" : MULTILINECOMMENT // Here we enter multiline comment state
+}
+
+// Allows us to catch unterminated comments
+<MULTILINECOMMENT> MORE:
+{
+  <~[]>
+}
+
+// Rules for inside of multiline comment state
+<MULTILINECOMMENT> SKIP :
+{
+  "*/" : DEFAULT // Back to the default state
+}
+
+TOKEN : /* Keywords */
+{
+  "class" | "extends" | "static" | "public" | "void" | "int" | "boolean"
+| "new" | "this" | "if" | "else" | "while" | "return" | "main" | "String"
+| "true" | "false" | "System" | "out" | "println" 
+}
+
+TOKEN : /* Internal tokens */
+{
+  <#DIGIT:  ["0"-"9"]>
+| <#LETTER: (["A"-"Z"]|["a"-"z"])>
+}
+
+TOKEN : /* Integer literals */
+{
+  <INTLIT: (<DIGIT>)+>
+    {
+      /* Detect integer overflow */
+      try {
+        Integer.parseInt(matchedToken.image);
+      } catch(NumberFormatException e) {
+        throw new TokenMgrError("Lexical error: Integer overflow: line "
+          + matchedToken.beginLine + ", column " + matchedToken.beginColumn
+          + ", lexeme: " + matchedToken.image, 0); /* Detect integer overflow */
+      }
+    }
+}
+
+TOKEN : /* String literals  */
+{
+  <STRLIT: ("\"" (~["\"","\n"])* "\"")>
+| <UNTERM_STRLIT: ("\"" (~["\"", "\n"])*)>
+  { if (true) throw new TokenMgrError("Lexical error: Unterminated string: line "
+        + matchedToken.beginLine + ", column " + matchedToken.beginColumn
+        + ", lexeme: " + matchedToken.image, 0); } /* Detect unterm. strings */
+}
+
+TOKEN : /* Identifiers */
+{
+  <ID: <LETTER> (<LETTER>|<DIGIT>)*>
+}
+
+TOKEN : /* Operators and delimiters */
+{
+   "+" | "-" | "*" | "/" | "&&" | "||" | "!"
+|  "==" | "!=" | "<" | "<=" | ">" | ">="
+|  "=" | ";" | "," | "." | "(" | ")" | "[" | "]" | "{" | "}"
+}
+
+//
+// PARSER SECTION ---------------------------------------------------------------
+//
+
+// Program -> {ClassDecl}
+//
+Ast.Program Program():
+{ List<Ast.ClassDecl> cl = new ArrayList<Ast.ClassDecl>();
+  Ast.ClassDecl c; }
+{
+  ( c=ClassDecl() {cl.add(c);} )* <EOF>
+  { return new Ast.Program(cl); }
+}
+
+/*
+ * ClassDecl -> "class" <ID> ["extends" <ID>] "{" {VarDecl} {MethodDecl} "}"
+ * (String classname, String parentclass, list of VarDecls, list of MethodDecls)
+*/
+Ast.ClassDecl ClassDecl():
+{ Token tkn;
+  String cn;
+  String pc=null;
+  List<Ast.VarDecl> vdl = new ArrayList<Ast.VarDecl>();
+  List<Ast.MethodDecl> mdl = new ArrayList<Ast.MethodDecl>();
+  Ast.VarDecl v;
+  Ast.MethodDecl m; }
+{
+  "class" tkn=<ID> { cn=tkn.image; } ["extends" tkn=<ID> {pc=tkn.image;}] "{"
+          ( v=VarDecl() {vdl.add(v);} )*
+          ( m=MethodDecl() {mdl.add(m);} )* "}"
+
+
+  { return new Ast.ClassDecl(cn, pc, vdl, mdl); }
+}
+
+/* Original:
+ * MethodDecl -> "public" ExtType <ID> "(" [Param {"," Param}] ")"
+ *                 "{" {VarDecl} {Stmt} "}"
+ *            |  "public" "static" "void" "main" "(" "String" "[" "]" <ID> ")"
+ *                 "{" {VarDecl} {Stmt} "}"
+ * (Type returntype, String name, list of params, list of VarDecls, list of Stmts)
+*/
+Ast.MethodDecl MethodDecl():
+{
+  Token tkn;
+  Ast.Type t;
+  String nm;
+  List<Ast.Param> plist = new ArrayList<Ast.Param>();
+  Ast.Param p;
+  List<Ast.VarDecl> vlist = new ArrayList<Ast.VarDecl>();
+  Ast.VarDecl v;
+  List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
+  Ast.Stmt s;
+}
+{
+  LOOKAHEAD(2) "public" t=ExtType() tkn=<ID> {nm=tkn.image;} "(" [p=Param() {plist.add(p);}]
+        ("," p=Param() {plist.add(p);})* ")"
+        "{" (LOOKAHEAD(2) v=VarDecl() {vlist.add(v);})* (s=Stmt() {slist.add(s);} )* "}"
+
+        { return new Ast.MethodDecl(t, nm, plist, vlist, slist); }
+
+| "public" "static" "void" "main" "(" "String" "[" "]" tkn=<ID> ")"
+             "{" (LOOKAHEAD(2) v=VarDecl() {vlist.add(v);})* (s=Stmt() {slist.add(s);} )* "}"
+
+        {
+           // Manually create param for main method call
+           Ast.Type tempType = new Ast.ObjType("String");
+           Ast.Type paramType = new Ast.ArrayType(tempType);
+           p = new Ast.Param(paramType, tkn.image);
+           plist.add(p);
+           return new Ast.MethodDecl(null, "main", plist, vlist, slist);
+        }
+}
+
+// Param -> Type <ID>
+// (Type type, String name)
+Ast.Param Param():
+{
+  Token tkn;
+  Ast.Type t;
+  String nm;
+}
+{
+  t=Type() tkn=<ID> {nm=tkn.image;}
+  { return new Ast.Param(t, nm); }
+}
+
+// VarDecl -> Type <ID> ["=" InitExpr] ";"
+// (Type type, String name, Exp initExpr (possibly null))
+Ast.VarDecl VarDecl():
+{
+  Token tkn;
+  Ast.Type t;
+  Ast.Exp initExp=null;
+  String nm;
+}
+{
+  t=Type() tkn=<ID> {nm=tkn.image;} ["=" initExp=InitExpr()] ";"
+  { return new Ast.VarDecl(t, nm, initExp); }
+}
+
+// ExtType -> Type | "void"
+//
+Ast.Type ExtType(): {Ast.Type t;}
+{
+  t=Type() { return t; }
+| "void"   { return null; }
+}
+
+// Type -> BasicType
+//      |  BasicType "[" "]"
+//      |  <ID>
+//
+Ast.Type Type(): {Ast.Type t; Token tkn;}
+{
+  LOOKAHEAD(2) t=BasicType()          { return t;                          }
+| t=BasicType() "[" "]"               { return new Ast.ArrayType(t);       }
+| tkn=<ID>                            { return new Ast.ObjType(tkn.image); }
+}
+
+// BasicType -> "int" | "boolean"
+//
+Ast.Type BasicType(): {}
+{
+  "int"     { return new Ast.IntType();  }
+| "boolean" { return new Ast.BoolType(); }
+}
+
+// Stmt -> "{" {Stmt} "}"
+//      |  ExtId "(" [Args] ")" ";"
+//      |  Lvalue "=" InitExpr ";"
+//      |  "if" "(" Expr ")" Stmt ["else" Stmt]
+//      |  "while" "(" Expr ")" Stmt
+//      |  "System" "." "out" "." "println" "(" [PrintArg] ")" ";"
+//      |  "return" [Expr] ";"
+//
+Ast.Stmt Stmt():
+{
+  Ast.Type t;
+  String nm;
+  List<Ast.Param> plist = new ArrayList<Ast.Param>();
+  Ast.Param p;
+  List<Ast.VarDecl> vlist = new ArrayList<Ast.VarDecl>();
+  Ast.VarDecl v;
+  List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
+  Ast.Stmt s1;
+  Ast.Stmt s2=null;
+  Ast.Exp e;
+  Ast.PrArg pr;
+}
+{
+  "{" (s1=Stmt() {slist.add(s1);})* "}"  { return new Ast.Block(slist); }
+
+//| ExtId() (("(" [Args()] ")" ";") | (["[" Expr() "]"] "=" InitExpr() ";"))
+
+| "if" "(" e=Expr() ")" s1=Stmt() ["else" s2=Stmt()] { return new Ast.If(e, s1, s2);}
+| "while" "(" e=Expr() ")" s1=Stmt() { return new Ast.While(e, s1); }
+| "System" "." "out" "." "println" "(" [ pr=PrintArg() ] ")" ";" { return new Ast.Print(pr); }
+| "return" [e=Expr()] ";"  { return new Ast.Return(e); }
+}
+
+// Args -> Expr {"," Expr}
+//
+void Args(): {}
+{
+  Expr() ("," Expr())*
+}
+
+// PrintArg -> Expr | <STRLIT>
+//
+Ast.PrArg PrintArg():
+{
+  Token tkn;
+  Ast.Exp e;
+}
+{
+ e=Expr()     { return e; }
+ | tkn=<STRLIT> { return new Ast.StrLit(tkn.image); }
+}
+
+// InitExpr -> "new" BasicType "[" <INTLIT> "]"
+//          |  "new" <ID> "(" ")"
+//          |  Expr
+//
+ Ast.Exp InitExpr():
+{ Token tkn;
+  Ast.Type t;
+  Ast.Exp e;
+}
+{
+  LOOKAHEAD(2) "new" t=BasicType() "[" tkn=<INTLIT> "]" { return new Ast.NewArray(t, Integer.parseInt(tkn.image)); }
+| "new" tkn=<ID> "(" ")" { return new Ast.NewObj(tkn.image); }
+| e=Expr()  { return e; }
+}
+
+/* Original:
+ * Expr -> Expr BinOp Expr
+ *      |  UnOp Expr
+ *      |  "(" Expr ")"
+ *      |  ExtId "(" [Args] ")"
+ *      |  Lvalue
+ *      |  Literal
+*/
+Ast.Exp Expr(): {Ast.Exp e;}
+{
+  e=A() { return e; }
+}
+
+void A(): {} {B() (("||") B())* }
+void B(): {} {C() (("&&") C())* }
+void C(): {} {D() (("=="|"!=") D())* }
+void D(): {} {E() (("<"|"<="|">"|">=") E())* }
+void E(): {} {F() (("+"|"-") F())* }
+void F(): {} {G() (("*"|"/") G())* }
+void G(): {} {("-"|"!")* H() }
+
+void H(): {}
+{
+  ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
+| "(" Expr() ")"
+| Literal()
+}
+
+// ExtId -> ["this" "."] <ID> {"." <ID>}
+//
+void ExtId(): {}
+{
+  ["this" "."] <ID> ("." <ID>)*
+}
+
+// Literal -> <INTLIT> | "true" | "false"
+//
+void Literal(): {}
+{
+  <INTLIT> | "true" | "false"
+}
