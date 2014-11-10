@@ -8,9 +8,9 @@ public class mjParser implements mjParserConstants {
     try {
       if (args.length == 1) {
         FileInputStream stream = new FileInputStream(args[0]);
-        new mjParser(stream).Program();
+        Ast.Program p = new mjParser(stream).Program();
         stream.close();
-        System.out.println("Program's syntax is valid.");
+        System.out.print(p);
       } else {
         System.out.println("Need a file name as command-line argument.");
       }
@@ -30,6 +30,7 @@ public class mjParser implements mjParserConstants {
   static final public Ast.Program Program() throws ParseException {
   List<Ast.ClassDecl> cl = new ArrayList<Ast.ClassDecl>();
   Ast.ClassDecl c;
+    System.out.println("IN PROGRAM");
     label_1:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -55,19 +56,19 @@ public class mjParser implements mjParserConstants {
   static final public Ast.ClassDecl ClassDecl() throws ParseException {
   Token tkn;
   String cn;
-  String pc=null;
+  String pc="";
   List<Ast.VarDecl> vdl = new ArrayList<Ast.VarDecl>();
   List<Ast.MethodDecl> mdl = new ArrayList<Ast.MethodDecl>();
   Ast.VarDecl v;
   Ast.MethodDecl m;
     jj_consume_token(10);
     tkn = jj_consume_token(ID);
-                     cn=tkn.image;
+                     cn=new String(tkn.image);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 11:
       jj_consume_token(11);
       tkn = jj_consume_token(ID);
-                                                          pc=tkn.image;
+                                                                      pc=new String(tkn.image);
       break;
     default:
       jj_la1[1] = jj_gen;
@@ -128,14 +129,14 @@ public class mjParser implements mjParserConstants {
       jj_consume_token(13);
       t = ExtType();
       tkn = jj_consume_token(ID);
-                                              nm=tkn.image;
+                                              nm=new String(tkn.image);
       jj_consume_token(53);
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 15:
       case 16:
       case ID:
         p = Param();
-                                                                             plist.add(p);
+                                                                                         plist.add(p);
         break;
       default:
         jj_la1[4] = jj_gen;
@@ -170,10 +171,12 @@ public class mjParser implements mjParserConstants {
       label_6:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case 18:
         case 19:
         case 21:
         case 22:
         case 27:
+        case ID:
         case 57:
           ;
           break;
@@ -185,7 +188,7 @@ public class mjParser implements mjParserConstants {
                                                                    slist.add(s);
       }
       jj_consume_token(58);
-          {if (true) return new Ast.MethodDecl(t, nm, plist, vlist, slist);}
+         {if (true) return new Ast.MethodDecl(t, nm, plist, vlist, slist);}
     } else {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 13:
@@ -213,10 +216,12 @@ public class mjParser implements mjParserConstants {
         label_8:
         while (true) {
           switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+          case 18:
           case 19:
           case 21:
           case 22:
           case 27:
+          case ID:
           case 57:
             ;
             break;
@@ -252,7 +257,7 @@ public class mjParser implements mjParserConstants {
   String nm;
     t = Type();
     tkn = jj_consume_token(ID);
-                     nm=tkn.image;
+                     nm=new String(tkn.image);
     {if (true) return new Ast.Param(t, nm);}
     throw new Error("Missing return statement in function");
   }
@@ -266,7 +271,7 @@ public class mjParser implements mjParserConstants {
   String nm;
     t = Type();
     tkn = jj_consume_token(ID);
-                     nm=tkn.image;
+                     nm=new String(tkn.image);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 49:
       jj_consume_token(49);
@@ -365,7 +370,6 @@ public class mjParser implements mjParserConstants {
 //
   static final public Ast.Stmt Stmt() throws ParseException {
   Ast.Type t;
-  String nm;
   List<Ast.Param> plist = new ArrayList<Ast.Param>();
   Ast.Param p;
   List<Ast.VarDecl> vlist = new ArrayList<Ast.VarDecl>();
@@ -373,18 +377,20 @@ public class mjParser implements mjParserConstants {
   List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
   Ast.Stmt s1;
   Ast.Stmt s2=null;
-  Ast.Exp e;
-  Ast.PrArg pr;
+  Ast.Exp e=null;
+  Ast.PrArg pr=null;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 57:
       jj_consume_token(57);
       label_9:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case 18:
         case 19:
         case 21:
         case 22:
         case 27:
+        case ID:
         case 57:
           ;
           break;
@@ -398,6 +404,52 @@ public class mjParser implements mjParserConstants {
       jj_consume_token(58);
                                            {if (true) return new Ast.Block(slist);}
       break;
+    case 18:
+    case ID:
+      ExtId();
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case 53:
+        jj_consume_token(53);
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case 18:
+        case 25:
+        case 26:
+        case INTLIT:
+        case ID:
+        case 37:
+        case 42:
+        case 53:
+          Args();
+          break;
+        default:
+          jj_la1[14] = jj_gen;
+          ;
+        }
+        jj_consume_token(54);
+        jj_consume_token(50);
+        break;
+      case 49:
+      case 55:
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case 55:
+          jj_consume_token(55);
+          Expr();
+          jj_consume_token(56);
+          break;
+        default:
+          jj_la1[15] = jj_gen;
+          ;
+        }
+        jj_consume_token(49);
+        InitExpr();
+        jj_consume_token(50);
+        break;
+      default:
+        jj_la1[16] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
+      break;
     case 19:
       jj_consume_token(19);
       jj_consume_token(53);
@@ -410,7 +462,7 @@ public class mjParser implements mjParserConstants {
         s2 = Stmt();
         break;
       default:
-        jj_la1[14] = jj_gen;
+        jj_la1[17] = jj_gen;
         ;
       }
                                                        {if (true) return new Ast.If(e, s1, s2);}
@@ -443,7 +495,7 @@ public class mjParser implements mjParserConstants {
         pr = PrintArg();
         break;
       default:
-        jj_la1[15] = jj_gen;
+        jj_la1[18] = jj_gen;
         ;
       }
       jj_consume_token(54);
@@ -464,14 +516,14 @@ public class mjParser implements mjParserConstants {
         e = Expr();
         break;
       default:
-        jj_la1[16] = jj_gen;
+        jj_la1[19] = jj_gen;
         ;
       }
       jj_consume_token(50);
                              {if (true) return new Ast.Return(e);}
       break;
     default:
-      jj_la1[17] = jj_gen;
+      jj_la1[20] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -489,7 +541,7 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[18] = jj_gen;
+        jj_la1[21] = jj_gen;
         break label_10;
       }
       jj_consume_token(51);
@@ -519,7 +571,7 @@ public class mjParser implements mjParserConstants {
                   {if (true) return new Ast.StrLit(tkn.image);}
       break;
     default:
-      jj_la1[19] = jj_gen;
+      jj_la1[22] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
@@ -562,7 +614,7 @@ public class mjParser implements mjParserConstants {
               {if (true) return e;}
         break;
       default:
-        jj_la1[20] = jj_gen;
+        jj_la1[23] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
@@ -585,8 +637,9 @@ public class mjParser implements mjParserConstants {
     throw new Error("Missing return statement in function");
   }
 
-  static final public void A() throws ParseException {
-    B();
+  static final public Ast.Exp A() throws ParseException {
+              Ast.Exp e1, e2=null; Token tkn=null;
+    e1 = B();
     label_11:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -594,16 +647,23 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[21] = jj_gen;
+        jj_la1[24] = jj_gen;
         break label_11;
       }
       jj_consume_token(41);
-      B();
+      e2 = B();
     }
+    if(tkn != null) {
+      {if (true) return new Ast.Binop(Ast.BOP.OR, e1, e2);}
+    } else {
+      {if (true) return e1;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void B() throws ParseException {
-    C();
+  static final public Ast.Exp B() throws ParseException {
+              Ast.Exp e1, e2=null; Token tkn=null;
+    e1 = C();
     label_12:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -611,16 +671,23 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[22] = jj_gen;
+        jj_la1[25] = jj_gen;
         break label_12;
       }
-      jj_consume_token(40);
-      C();
+      tkn = jj_consume_token(40);
+      e2 = C();
     }
+    if(tkn != null) {
+      {if (true) return new Ast.Binop(Ast.BOP.AND, e1, e2);}
+    } else {
+      {if (true) return e1;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void C() throws ParseException {
-    D();
+  static final public Ast.Exp C() throws ParseException {
+              Ast.Exp e1, e2=null; Token tkn=null;
+    e1 = D();
     label_13:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -629,27 +696,38 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[23] = jj_gen;
+        jj_la1[26] = jj_gen;
         break label_13;
       }
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 43:
-        jj_consume_token(43);
+        tkn = jj_consume_token(43);
         break;
       case 44:
-        jj_consume_token(44);
+        tkn = jj_consume_token(44);
         break;
       default:
-        jj_la1[24] = jj_gen;
+        jj_la1[27] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
-      D();
+      e2 = D();
     }
+    if(tkn != null) {
+      if(tkn.image == "==") {
+        {if (true) return new Ast.Binop(Ast.BOP.EQ, e1, e2);}
+      } else if(tkn.image == "==") {
+        {if (true) return new Ast.Binop(Ast.BOP.NE, e1, e2);}
+      }
+    } else {
+      {if (true) return e1;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void D() throws ParseException {
-    E();
+  static final public Ast.Exp D() throws ParseException {
+              Ast.Exp e1, e2=null; Token tkn=null;
+    e1 = E();
     label_14:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -660,33 +738,48 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[25] = jj_gen;
+        jj_la1[28] = jj_gen;
         break label_14;
       }
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 45:
-        jj_consume_token(45);
+        tkn = jj_consume_token(45);
         break;
       case 46:
-        jj_consume_token(46);
+        tkn = jj_consume_token(46);
         break;
       case 47:
-        jj_consume_token(47);
+        tkn = jj_consume_token(47);
         break;
       case 48:
-        jj_consume_token(48);
+        tkn = jj_consume_token(48);
         break;
       default:
-        jj_la1[26] = jj_gen;
+        jj_la1[29] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
-      E();
+      e2 = E();
     }
+    if(tkn != null) {
+      if(tkn.image == "<") {
+        {if (true) return new Ast.Binop(Ast.BOP.LT, e1, e2);}
+      } else if(tkn.image == "<=") {
+        {if (true) return new Ast.Binop(Ast.BOP.LE, e1, e2);}
+      } else if(tkn.image == ">") {
+        {if (true) return new Ast.Binop(Ast.BOP.GT, e1, e2);}
+      } else if(tkn.image == ">=") {
+        {if (true) return new Ast.Binop(Ast.BOP.GE, e1, e2);}
+      }
+    } else {
+      {if (true) return e1;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void E() throws ParseException {
-    F();
+  static final public Ast.Exp E() throws ParseException {
+              Ast.Exp e1, e2=null; Token tkn=null;
+    e1 = F();
     label_15:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -695,27 +788,38 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[27] = jj_gen;
+        jj_la1[30] = jj_gen;
         break label_15;
       }
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 36:
-        jj_consume_token(36);
+        tkn = jj_consume_token(36);
         break;
       case 37:
-        jj_consume_token(37);
+        tkn = jj_consume_token(37);
         break;
       default:
-        jj_la1[28] = jj_gen;
+        jj_la1[31] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
       F();
     }
+    if(tkn != null) {
+      if(tkn.image == "+") {
+        {if (true) return new Ast.Binop(Ast.BOP.ADD, e1, e2);}
+      } else if(tkn.image == "-") {
+        {if (true) return new Ast.Binop(Ast.BOP.SUB, e1, e2);}
+      }
+    } else {
+      {if (true) return e1;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void F() throws ParseException {
-    G();
+  static final public Ast.Exp F() throws ParseException {
+              Ast.Exp e1, e2=null; Token tkn=null;
+    e1 = G();
     label_16:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -724,26 +828,37 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[29] = jj_gen;
+        jj_la1[32] = jj_gen;
         break label_16;
       }
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 38:
-        jj_consume_token(38);
+        tkn = jj_consume_token(38);
         break;
       case 39:
-        jj_consume_token(39);
+        tkn = jj_consume_token(39);
         break;
       default:
-        jj_la1[30] = jj_gen;
+        jj_la1[33] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
-      G();
+      e2 = G();
     }
+    if(tkn != null) {
+      if(tkn.image == "*") {
+        {if (true) return new Ast.Binop(Ast.BOP.MUL, e1, e2);}
+      } else if(tkn.image == "/") {
+        {if (true) return new Ast.Binop(Ast.BOP.DIV, e1, e2);}
+      }
+    } else {
+      {if (true) return e1;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void G() throws ParseException {
+  static final public Ast.Exp G() throws ParseException {
+              Ast.Exp e; Token tkn=null;
     label_17:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -752,29 +867,41 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[31] = jj_gen;
+        jj_la1[34] = jj_gen;
         break label_17;
       }
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 37:
-        jj_consume_token(37);
+        tkn = jj_consume_token(37);
         break;
       case 42:
-        jj_consume_token(42);
+        tkn = jj_consume_token(42);
         break;
       default:
-        jj_la1[32] = jj_gen;
+        jj_la1[35] = jj_gen;
         jj_consume_token(-1);
         throw new ParseException();
       }
     }
-    H();
+    e = H();
+    if(tkn != null) {
+      if(tkn.image == "-") {
+        {if (true) return new Ast.Unop(Ast.UOP.NEG, e);}
+      } else if(tkn.image == "!") {
+        {if (true) return new Ast.Unop(Ast.UOP.NOT, e);}
+      }
+    } else {
+      {if (true) return e;}
+    }
+    throw new Error("Missing return statement in function");
   }
 
-  static final public void H() throws ParseException {
-    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case 18:
-    case ID:
+  static final public Ast.Exp H() throws ParseException {
+  Token tkn;
+  Ast.Exp e;
+  boolean b;
+  int i;
+    if (jj_2_6(2)) {
       ExtId();
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 53:
@@ -794,7 +921,7 @@ public class mjParser implements mjParserConstants {
             Args();
             break;
           default:
-            jj_la1[33] = jj_gen;
+            jj_la1[36] = jj_gen;
             ;
           }
           jj_consume_token(54);
@@ -805,43 +932,56 @@ public class mjParser implements mjParserConstants {
           jj_consume_token(56);
           break;
         default:
-          jj_la1[34] = jj_gen;
+          jj_la1[37] = jj_gen;
           jj_consume_token(-1);
           throw new ParseException();
         }
         break;
       default:
-        jj_la1[35] = jj_gen;
+        jj_la1[38] = jj_gen;
         ;
       }
-      break;
-    case 53:
-      jj_consume_token(53);
-      Expr();
-      jj_consume_token(54);
-      break;
-    case 25:
-    case 26:
-    case INTLIT:
-      Literal();
-      break;
-    default:
-      jj_la1[36] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+    } else {
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case 53:
+        jj_consume_token(53);
+        e = Expr();
+        jj_consume_token(54);
+                     {if (true) return e;}
+        break;
+      case INTLIT:
+        i = IntLit();
+                     {if (true) return new Ast.IntLit(i);}
+        break;
+      case 25:
+      case 26:
+        b = BoolLit();
+                     {if (true) return new Ast.BoolLit(b);}
+        break;
+      case ID:
+        tkn = jj_consume_token(ID);
+                     {if (true) return new Ast.Id(tkn.image);}
+        break;
+      default:
+        jj_la1[39] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
     }
+    throw new Error("Missing return statement in function");
   }
 
 // ExtId -> ["this" "."] <ID> {"." <ID>}
 //
   static final public void ExtId() throws ParseException {
+  Token tkn;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 18:
       jj_consume_token(18);
       jj_consume_token(52);
       break;
     default:
-      jj_la1[37] = jj_gen;
+      jj_la1[40] = jj_gen;
       ;
     }
     jj_consume_token(ID);
@@ -852,7 +992,7 @@ public class mjParser implements mjParserConstants {
         ;
         break;
       default:
-        jj_la1[38] = jj_gen;
+        jj_la1[41] = jj_gen;
         break label_18;
       }
       jj_consume_token(52);
@@ -860,24 +1000,30 @@ public class mjParser implements mjParserConstants {
     }
   }
 
-// Literal -> <INTLIT> | "true" | "false"
-//
-  static final public void Literal() throws ParseException {
+  static final public int IntLit() throws ParseException {
+               Token tkn;
+    tkn = jj_consume_token(INTLIT);
+                 {if (true) return Integer.parseInt(tkn.image);}
+    throw new Error("Missing return statement in function");
+  }
+
+  static final public boolean BoolLit() throws ParseException {
+                    Token tkn;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-    case INTLIT:
-      jj_consume_token(INTLIT);
-      break;
     case 25:
-      jj_consume_token(25);
+      tkn = jj_consume_token(25);
+                 {if (true) return true;}
       break;
     case 26:
-      jj_consume_token(26);
+      tkn = jj_consume_token(26);
+                 {if (true) return false;}
       break;
     default:
-      jj_la1[39] = jj_gen;
+      jj_la1[42] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
+    throw new Error("Missing return statement in function");
   }
 
   static private boolean jj_2_1(int xla) {
@@ -915,16 +1061,21 @@ public class mjParser implements mjParserConstants {
     finally { jj_save(4, xla); }
   }
 
-  static private boolean jj_3R_22() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3_4()) {
-    jj_scanpos = xsp;
-    if (jj_3R_27()) {
-    jj_scanpos = xsp;
-    if (jj_3R_28()) return true;
-    }
-    }
+  static private boolean jj_2_6(int xla) {
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return !jj_3_6(); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(5, xla); }
+  }
+
+  static private boolean jj_3R_34() {
+    if (jj_scan_token(ID)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_33() {
+    if (jj_3R_21()) return true;
+    if (jj_scan_token(55)) return true;
     return false;
   }
 
@@ -933,53 +1084,51 @@ public class mjParser implements mjParserConstants {
     return false;
   }
 
+  static private boolean jj_3R_24() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3_4()) {
+    jj_scanpos = xsp;
+    if (jj_3R_33()) {
+    jj_scanpos = xsp;
+    if (jj_3R_34()) return true;
+    }
+    }
+    return false;
+  }
+
   static private boolean jj_3_1() {
     if (jj_3R_19()) return true;
     return false;
   }
 
-  static private boolean jj_3R_24() {
-    if (jj_scan_token(14)) return true;
+  static private boolean jj_3R_31() {
+    if (jj_scan_token(53)) return true;
     return false;
   }
 
   static private boolean jj_3R_23() {
-    if (jj_3R_22()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_20() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_23()) {
+    if (jj_3R_31()) {
     jj_scanpos = xsp;
-    if (jj_3R_24()) return true;
+    if (jj_3R_32()) return true;
     }
     return false;
   }
 
   static private boolean jj_3R_26() {
-    if (jj_scan_token(16)) return true;
+    if (jj_scan_token(14)) return true;
     return false;
   }
 
-  static private boolean jj_3R_25() {
-    if (jj_scan_token(15)) return true;
+  static private boolean jj_3R_29() {
+    if (jj_scan_token(18)) return true;
+    if (jj_scan_token(52)) return true;
     return false;
   }
 
-  static private boolean jj_3_3() {
-    if (jj_scan_token(13)) return true;
-    if (jj_3R_20()) return true;
-    return false;
-  }
-
-  static private boolean jj_3_2() {
-    if (jj_3R_19()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_21() {
+  static private boolean jj_3R_20() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_3R_25()) {
@@ -989,26 +1138,81 @@ public class mjParser implements mjParserConstants {
     return false;
   }
 
+  static private boolean jj_3R_25() {
+    if (jj_3R_24()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_22() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_29()) jj_scanpos = xsp;
+    if (jj_scan_token(ID)) return true;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_30()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  static private boolean jj_3_3() {
+    if (jj_scan_token(13)) return true;
+    if (jj_3R_20()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_19() {
+    if (jj_3R_24()) return true;
+    if (jj_scan_token(ID)) return true;
+    return false;
+  }
+
   static private boolean jj_3_5() {
     if (jj_scan_token(17)) return true;
     if (jj_3R_21()) return true;
     return false;
   }
 
-  static private boolean jj_3R_19() {
+  static private boolean jj_3_6() {
     if (jj_3R_22()) return true;
-    if (jj_scan_token(ID)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_23()) jj_scanpos = xsp;
+    return false;
+  }
+
+  static private boolean jj_3R_32() {
+    if (jj_scan_token(55)) return true;
+    return false;
+  }
+
+  static private boolean jj_3_2() {
+    if (jj_3R_19()) return true;
     return false;
   }
 
   static private boolean jj_3R_28() {
-    if (jj_scan_token(ID)) return true;
+    if (jj_scan_token(16)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_30() {
+    if (jj_scan_token(52)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_21() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_27()) {
+    jj_scanpos = xsp;
+    if (jj_3R_28()) return true;
+    }
     return false;
   }
 
   static private boolean jj_3R_27() {
-    if (jj_3R_21()) return true;
-    if (jj_scan_token(55)) return true;
+    if (jj_scan_token(15)) return true;
     return false;
   }
 
@@ -1024,7 +1228,7 @@ public class mjParser implements mjParserConstants {
   static private Token jj_scanpos, jj_lastpos;
   static private int jj_la;
   static private int jj_gen;
-  static final private int[] jj_la1 = new int[40];
+  static final private int[] jj_la1 = new int[43];
   static private int[] jj_la1_0;
   static private int[] jj_la1_1;
   static {
@@ -1032,12 +1236,12 @@ public class mjParser implements mjParserConstants {
       jj_la1_init_1();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0x400,0x800,0x18000,0x2000,0x18000,0x0,0x8680000,0x8680000,0x2000,0x0,0x1c000,0x18000,0x18000,0x8680000,0x100000,0x6040000,0x6040000,0x8680000,0x0,0x6040000,0x6060000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6040000,0x0,0x0,0x6040000,0x40000,0x0,0x6000000,};
+      jj_la1_0 = new int[] {0x400,0x800,0x18000,0x2000,0x18000,0x0,0x86c0000,0x86c0000,0x2000,0x0,0x1c000,0x18000,0x18000,0x86c0000,0x6040000,0x0,0x0,0x100000,0x6040000,0x6040000,0x86c0000,0x0,0x6040000,0x6060000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6040000,0x0,0x0,0x6000000,0x40000,0x0,0x6000000,};
    }
    private static void jj_la1_init_1() {
-      jj_la1_1 = new int[] {0x0,0x0,0x8,0x0,0x8,0x80000,0x2000000,0x2000000,0x0,0x20000,0x8,0x8,0x0,0x2000000,0x0,0x20042b,0x200429,0x2000000,0x80000,0x20042b,0x200429,0x200,0x100,0x1800,0x1800,0x1e000,0x1e000,0x30,0x30,0xc0,0xc0,0x420,0x420,0x200429,0xa00000,0xa00000,0x200009,0x0,0x100000,0x1,};
+      jj_la1_1 = new int[] {0x0,0x0,0x8,0x0,0x8,0x80000,0x2000008,0x2000008,0x0,0x20000,0x8,0x8,0x0,0x2000008,0x200429,0x800000,0xa20000,0x0,0x20042b,0x200429,0x2000008,0x80000,0x20042b,0x200429,0x200,0x100,0x1800,0x1800,0x1e000,0x1e000,0x30,0x30,0xc0,0xc0,0x420,0x420,0x200429,0xa00000,0xa00000,0x200009,0x0,0x100000,0x0,};
    }
-  static final private JJCalls[] jj_2_rtns = new JJCalls[5];
+  static final private JJCalls[] jj_2_rtns = new JJCalls[6];
   static private boolean jj_rescan = false;
   static private int jj_gc = 0;
 
@@ -1059,7 +1263,7 @@ public class mjParser implements mjParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 40; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 43; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -1074,7 +1278,7 @@ public class mjParser implements mjParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 40; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 43; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -1092,7 +1296,7 @@ public class mjParser implements mjParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 40; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 43; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -1103,7 +1307,7 @@ public class mjParser implements mjParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 40; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 43; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -1120,7 +1324,7 @@ public class mjParser implements mjParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 40; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 43; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -1130,7 +1334,7 @@ public class mjParser implements mjParserConstants {
     token = new Token();
     jj_ntk = -1;
     jj_gen = 0;
-    for (int i = 0; i < 40; i++) jj_la1[i] = -1;
+    for (int i = 0; i < 43; i++) jj_la1[i] = -1;
     for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -1250,7 +1454,7 @@ public class mjParser implements mjParserConstants {
       la1tokens[jj_kind] = true;
       jj_kind = -1;
     }
-    for (int i = 0; i < 40; i++) {
+    for (int i = 0; i < 43; i++) {
       if (jj_la1[i] == jj_gen) {
         for (int j = 0; j < 32; j++) {
           if ((jj_la1_0[i] & (1<<j)) != 0) {
@@ -1289,7 +1493,7 @@ public class mjParser implements mjParserConstants {
 
   static private void jj_rescan_token() {
     jj_rescan = true;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
     try {
       JJCalls p = jj_2_rtns[i];
       do {
@@ -1301,6 +1505,7 @@ public class mjParser implements mjParserConstants {
             case 2: jj_3_3(); break;
             case 3: jj_3_4(); break;
             case 4: jj_3_5(); break;
+            case 5: jj_3_6(); break;
           }
         }
         p = p.next;

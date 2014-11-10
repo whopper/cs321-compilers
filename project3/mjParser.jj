@@ -17,9 +17,9 @@ public class mjParser {
     try {
       if (args.length == 1) {
         FileInputStream stream = new FileInputStream(args[0]);
-        new mjParser(stream).Program();
+        Ast.Program p = new mjParser(stream).Program();
         stream.close();
-        System.out.println("Program's syntax is valid.");
+        System.out.print(p);
       } else {
         System.out.println("Need a file name as command-line argument.");
       }
@@ -118,6 +118,7 @@ Ast.Program Program():
 { List<Ast.ClassDecl> cl = new ArrayList<Ast.ClassDecl>();
   Ast.ClassDecl c; }
 {
+  { System.out.println("IN PROGRAM"); }
   ( c=ClassDecl() {cl.add(c);} )* <EOF>
   { return new Ast.Program(cl); }
 }
@@ -129,18 +130,18 @@ Ast.Program Program():
 Ast.ClassDecl ClassDecl():
 { Token tkn;
   String cn;
-  String pc=null;
+  String pc="";
   List<Ast.VarDecl> vdl = new ArrayList<Ast.VarDecl>();
   List<Ast.MethodDecl> mdl = new ArrayList<Ast.MethodDecl>();
   Ast.VarDecl v;
   Ast.MethodDecl m; }
 {
-  "class" tkn=<ID> { cn=tkn.image; } ["extends" tkn=<ID> {pc=tkn.image;}] "{"
+  "class" tkn=<ID> { cn=new String(tkn.image); } ["extends" tkn=<ID> {pc=new String(tkn.image);}] "{"
           ( v=VarDecl() {vdl.add(v);} )*
           ( m=MethodDecl() {mdl.add(m);} )* "}"
 
-
   { return new Ast.ClassDecl(cn, pc, vdl, mdl); }
+
 }
 
 /* Original:
@@ -163,11 +164,11 @@ Ast.MethodDecl MethodDecl():
   Ast.Stmt s;
 }
 {
-  LOOKAHEAD(2) "public" t=ExtType() tkn=<ID> {nm=tkn.image;} "(" [p=Param() {plist.add(p);}]
+  LOOKAHEAD(2) "public" t=ExtType() tkn=<ID> {nm=new String(tkn.image);} "(" [p=Param() {plist.add(p);}]
         ("," p=Param() {plist.add(p);})* ")"
         "{" (LOOKAHEAD(2) v=VarDecl() {vlist.add(v);})* (s=Stmt() {slist.add(s);} )* "}"
 
-        { return new Ast.MethodDecl(t, nm, plist, vlist, slist); }
+        {return new Ast.MethodDecl(t, nm, plist, vlist, slist); }
 
 | "public" "static" "void" "main" "(" "String" "[" "]" tkn=<ID> ")"
              "{" (LOOKAHEAD(2) v=VarDecl() {vlist.add(v);})* (s=Stmt() {slist.add(s);} )* "}"
@@ -191,7 +192,7 @@ Ast.Param Param():
   String nm;
 }
 {
-  t=Type() tkn=<ID> {nm=tkn.image;}
+  t=Type() tkn=<ID> {nm=new String(tkn.image);}
   { return new Ast.Param(t, nm); }
 }
 
@@ -205,7 +206,7 @@ Ast.VarDecl VarDecl():
   String nm;
 }
 {
-  t=Type() tkn=<ID> {nm=tkn.image;} ["=" initExp=InitExpr()] ";"
+  t=Type() tkn=<ID> {nm=new String(tkn.image);} ["=" initExp=InitExpr()] ";"
   { return new Ast.VarDecl(t, nm, initExp); }
 }
 
@@ -247,7 +248,6 @@ Ast.Type BasicType(): {}
 Ast.Stmt Stmt():
 {
   Ast.Type t;
-  String nm;
   List<Ast.Param> plist = new ArrayList<Ast.Param>();
   Ast.Param p;
   List<Ast.VarDecl> vlist = new ArrayList<Ast.VarDecl>();
@@ -255,13 +255,13 @@ Ast.Stmt Stmt():
   List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
   Ast.Stmt s1;
   Ast.Stmt s2=null;
-  Ast.Exp e;
-  Ast.PrArg pr;
+  Ast.Exp e=null;
+  Ast.PrArg pr=null;
 }
 {
   "{" (s1=Stmt() {slist.add(s1);})* "}"  { return new Ast.Block(slist); }
 
-//| ExtId() (("(" [Args()] ")" ";") | (["[" Expr() "]"] "=" InitExpr() ";"))
+| ExtId() (("(" [Args()] ")" ";") | (["[" Expr() "]"] "=" InitExpr() ";"))
 
 | "if" "(" e=Expr() ")" s1=Stmt() ["else" s2=Stmt()] { return new Ast.If(e, s1, s2);}
 | "while" "(" e=Expr() ")" s1=Stmt() { return new Ast.While(e, s1); }
@@ -316,31 +316,149 @@ Ast.Exp Expr(): {Ast.Exp e;}
   e=A() { return e; }
 }
 
-void A(): {} {B() (("||") B())* }
-void B(): {} {C() (("&&") C())* }
-void C(): {} {D() (("=="|"!=") D())* }
-void D(): {} {E() (("<"|"<="|">"|">=") E())* }
-void E(): {} {F() (("+"|"-") F())* }
-void F(): {} {G() (("*"|"/") G())* }
-void G(): {} {("-"|"!")* H() }
-
-void H(): {}
+Ast.Exp A(): {Ast.Exp e1, e2=null; Token tkn=null;}
 {
-  ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
-| "(" Expr() ")"
-| Literal()
+  e1=B() ("||" e2=B())*
+  {
+    if(tkn != null) {
+      return new Ast.Binop(Ast.BOP.OR, e1, e2);
+    } else {
+      return e1;
+    }
+  }
+}
+
+Ast.Exp B(): {Ast.Exp e1, e2=null; Token tkn=null;}
+{
+  e1=C() (tkn="&&" e2=C())*
+  {
+    if(tkn != null) {
+      return new Ast.Binop(Ast.BOP.AND, e1, e2);
+    } else {
+      return e1;
+    }
+  }
+}
+
+Ast.Exp C(): {Ast.Exp e1, e2=null; Token tkn=null;}
+{
+  e1=D() ((tkn="=="|tkn="!=") e2=D())*
+  {
+    if(tkn != null) {
+      if(tkn.image == "==") {
+        return new Ast.Binop(Ast.BOP.EQ, e1, e2);
+      } else if(tkn.image == "==") {
+        return new Ast.Binop(Ast.BOP.NE, e1, e2);
+      }
+    } else {
+      return e1;
+    }
+  }
+}
+
+Ast.Exp D(): {Ast.Exp e1, e2=null; Token tkn=null;}
+{
+  e1=E() ((tkn="<"|tkn="<="|tkn=">"|tkn=">=") e2=E())*
+  {
+    if(tkn != null) {
+      if(tkn.image == "<") {
+        return new Ast.Binop(Ast.BOP.LT, e1, e2);
+      } else if(tkn.image == "<=") {
+        return new Ast.Binop(Ast.BOP.LE, e1, e2);
+      } else if(tkn.image == ">") {
+        return new Ast.Binop(Ast.BOP.GT, e1, e2);
+      } else if(tkn.image == ">=") {
+        return new Ast.Binop(Ast.BOP.GE, e1, e2);
+      }
+    } else {
+      return e1;
+    }
+  }
+}
+
+Ast.Exp E(): {Ast.Exp e1, e2=null; Token tkn=null;}
+{
+  e1=F() ((tkn="+"|tkn="-") F())*
+  {
+    if(tkn != null) {
+      if(tkn.image == "+") {
+        return new Ast.Binop(Ast.BOP.ADD, e1, e2);
+      } else if(tkn.image == "-") {
+        return new Ast.Binop(Ast.BOP.SUB, e1, e2);
+      }
+    } else {
+      return e1;
+    }
+  }
+}
+
+Ast.Exp F(): {Ast.Exp e1, e2=null; Token tkn=null;}
+{
+  e1=G() ((tkn="*"|tkn="/") e2=G())*
+  {
+    if(tkn != null) {
+      if(tkn.image == "*") {
+        return new Ast.Binop(Ast.BOP.MUL, e1, e2);
+      } else if(tkn.image == "/") {
+        return new Ast.Binop(Ast.BOP.DIV, e1, e2);
+      }
+    } else {
+      return e1;
+    }
+  }
+}
+
+Ast.Exp G(): {Ast.Exp e; Token tkn=null;}
+{
+  (tkn="-"|tkn="!")* e=H()
+  {
+    if(tkn != null) {
+      if(tkn.image == "-") {
+        return new Ast.Unop(Ast.UOP.NEG, e);
+      } else if(tkn.image == "!") {
+        return new Ast.Unop(Ast.UOP.NOT, e);
+      }
+    } else {
+      return e;
+    }
+  }
+}
+
+Ast.Exp H():
+{
+  Token tkn;
+  Ast.Exp e;
+  boolean b;
+  int i;
+}
+{
+  LOOKAHEAD(2) ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
+| "(" e=Expr() ")" { return e; }
+| i=IntLit()       { return new Ast.IntLit(i);  }
+| b=BoolLit()      { return new Ast.BoolLit(b); }
+| tkn=<ID>         { return new Ast.Id(tkn.image); }
 }
 
 // ExtId -> ["this" "."] <ID> {"." <ID>}
 //
-void ExtId(): {}
+void ExtId():
 {
+  Token tkn;
+}
+{
+  // this . <ID>        indicates a Call
+  // <ID> . <ID>        indicates a field
+  // this . <ID> . <ID> indicates ???
   ["this" "."] <ID> ("." <ID>)*
 }
 
-// Literal -> <INTLIT> | "true" | "false"
-//
-void Literal(): {}
+int IntLit(): {Token tkn;}
 {
-  <INTLIT> | "true" | "false"
+  tkn=<INTLIT> { return Integer.parseInt(tkn.image); }
+}
+
+boolean BoolLit(): {Token tkn;}
+{
+  tkn="true"   { return true; }
+| tkn="false"  { return false; }
 }
