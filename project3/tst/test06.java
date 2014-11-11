@@ -19,3 +19,4 @@ class A {
     return b[0];
   }
 }
+

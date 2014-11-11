@@ -5,7 +5,7 @@
 //----------------------------------------------------------------------
 //
 //
-options { DEBUG_PARSER=true; }  /* Show debugging info */
+//options { DEBUG_PARSER=true; }  /* Show debugging info */
 
 PARSER_BEGIN(mjParser)
 import java.util.*;
@@ -269,7 +269,7 @@ Ast.Stmt Stmt():
           return new Ast.Assign(eLeft, e2);
         }
       }
-    | "(" [elist=Args()] ")" ";" )          // Possible: eLeft();, eLeft(ArgA, ArgB);
+    | "(" [elist=Args()] ")" ";"          // Possible: eLeft();, eLeft(ArgA, ArgB);
       {
         if(eLeft instanceof Ast.Id) {
           e3  = new Ast.This();    // The object is This
@@ -280,6 +280,7 @@ Ast.Stmt Stmt():
         }
         return new Ast.CallStmt(e3, str, elist);
       }
+    )
 | "if" "(" e1=Expr() ")" s1=Stmt() ["else" s2=Stmt()] { return new Ast.If(e1, s1, s2);}
 | "while" "(" e1=Expr() ")" s1=Stmt()                 { return new Ast.While(e1, s1); }
 | "System" "." "out" "." "println" "(" [ pr=PrintArg() ] ")" ";" { return new Ast.Print(pr); }
@@ -375,18 +376,23 @@ u=UnOp() e2=Factor()            { return new Ast.Unop(u, e2); }
 | "(" e1=Expr() ")"             { return e1; }
 | i=IntLit()                    { return new Ast.IntLit(i);  }
 | b=BoolLit()                   { return new Ast.BoolLit(b); }
-| e1=ExtId() ( ["[" e2=Expr() "]"] | "(" [elist=Args()] ")" { isCall=true; } )
-    {
-      if(isCall == true) {                   // This is a method call
+| e1=ExtId()
+    ("(" [elist=Args()] ")"
+      {
         if(e1 instanceof Ast.Id) {
           e3 = new Ast.This();
           str = ((Ast.Id)e1).nm;
         } else if (e1 instanceof Ast.Field) {
           e3 = ((Ast.Field)e1).obj;
-          str = ((Ast.Field)e3).nm;
+          str = ((Ast.Field)e1).nm;
         }
         return new Ast.Call(e3, str, elist);
-      } else if(e2 != null) {                // This is an array element
+      }
+| ["[" e2=Expr() "]" {return new Ast.ArrayElm(e1,e2);} ])
+{ return e1; }
+/*
+    {
+      if(e2 != null) {                // This is an array element
         return new Ast.ArrayElm(e1,e2);
       } else if(e1 instanceof Ast.Field) {
         return e1;
@@ -394,6 +400,9 @@ u=UnOp() e2=Factor()            { return new Ast.Unop(u, e2); }
         return e1;
       }
     }
+
+*/
+
 }
 
 // ExtId -> ["this" "."] <ID> {"." <ID>}
@@ -403,6 +412,7 @@ Ast.Exp ExtId():
   Token tkn;
   Ast.Exp e1 = null;
   Ast.Exp e2 = null;
+  Ast.Exp e3 = null;
 }
 {
   ["this" {e1=new Ast.This();} "."] tkn=<ID>
@@ -414,9 +424,9 @@ Ast.Exp ExtId():
           }
         }
 
-  ("." tkn=<ID> { e1=new Ast.Field(e2, tkn.image); })*
-  { if(e1 != null) {
-      return e1;
+  ("." tkn=<ID> { e3=new Ast.Field(e2, tkn.image); })*
+  { if(e3 != null) {
+      return new Ast.Field(e2, tkn.image);
     } else {
       return e2;
     }
@@ -425,17 +435,8 @@ Ast.Exp ExtId():
 
 Ast.UOP UnOp(): {Token tkn;}
 {
-  tkn="-"
-|tkn="!"
-  {
-    if(tkn != null) {
-      if(tkn.image == "-") {
-        return Ast.UOP.NEG;
-      } else if(tkn.image == "!") {
-        return Ast.UOP.NOT;
-      }
-    }
-  }
+  tkn="-" { return Ast.UOP.NEG; }
+| tkn="!" { return Ast.UOP.NOT; }
 }
 
 Ast.BOP BinopA(): {}
@@ -454,6 +455,8 @@ Ast.BOP BinopC(): {}
 | ">=" { return Ast.BOP.GE; }
 | "<"  { return Ast.BOP.LT; }
 | "<=" { return Ast.BOP.LE; }
+| "==" { return Ast.BOP.EQ; }
+| "!=" { return Ast.BOP.NE; }
 }
 
 Ast.BOP BinopD(): {}
