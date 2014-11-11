@@ -254,25 +254,56 @@ Ast.Stmt Stmt():
   List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
   Ast.Stmt s1;
   Ast.Stmt s2=null;
+  Ast.Stmt s3;
+
   Ast.Exp e=null;
+  Ast.Exp e1=null;
+  Ast.Exp e2=null;
+  Ast.Exp e3=null;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   Ast.PrArg pr=null;
+  String str = null;
 }
 {
-  "{" (s1=Stmt() {slist.add(s1);})* "}"  { return new Ast.Block(slist); }
+  "{" (s1=Stmt() {slist.add(s1);})* "}" { return new Ast.Block(slist); }
+| e=ExtId() ( ("(" [elist=Args()] ")" ";"
+      {
+        if(e instanceof Ast.Id) {
+          e2 = new Ast.This();
+          str = ((Ast.Id)e2).nm;
+        } else if (e instanceof Ast.Field) {
+          e2 = ((Ast.Field)e).obj;
+          str = ((Ast.Field)e).nm;
+        }
 
-| ExtId() (("(" [Args()] ")" ";") | (["[" Expr() "]"] "=" InitExpr() ";"))
+        s3 = new Ast.CallStmt(e2, str, elist);} )
+
+| (["[" e1=Expr() "]"]
+    { if (e1 != null) {
+        e2 = new Ast.ArrayElm(e, e1);
+      } else {
+        e2 = e;
+      }
+    }
+  "=" e3=InitExpr() ";")) { s3 = new Ast.Assign(e1, e2);} { return s3; }
+
 
 | "if" "(" e=Expr() ")" s1=Stmt() ["else" s2=Stmt()] { return new Ast.If(e, s1, s2);}
-| "while" "(" e=Expr() ")" s1=Stmt() { return new Ast.While(e, s1); }
+| "while" "(" e=Expr() ")" s1=Stmt()                 { return new Ast.While(e, s1); }
 | "System" "." "out" "." "println" "(" [ pr=PrintArg() ] ")" ";" { return new Ast.Print(pr); }
-| "return" [e=Expr()] ";"  { return new Ast.Return(e); }
+| "return" [e=Expr()] ";"                            { return new Ast.Return(e); }
 }
 
 // Args -> Expr {"," Expr}
 //
-void Args(): {}
+List<Ast.Exp> Args():
 {
-  Expr() ("," Expr())*
+  Ast.Exp e1;
+  Ast.Exp e2;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
+}
+{
+  e1=Expr() ("," e2=Expr() {elist.add(e2);})* { return elist; }
 }
 
 // PrintArg -> Expr | <STRLIT>
@@ -283,7 +314,7 @@ Ast.PrArg PrintArg():
   Ast.Exp e;
 }
 {
- e=Expr()     { return e; }
+ e=Expr()       { return e; }
  | tkn=<STRLIT> { return new Ast.StrLit(tkn.image); }
 }
 
@@ -426,20 +457,29 @@ Ast.Exp G(): {Ast.Exp e; Token tkn=null;}
 Ast.Exp H():
 {
   Token tkn;
-  Ast.Exp e, eArg, eExpr;
+  Ast.Exp e=null, e2=null, e3=null, eExpr=null;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   boolean b;
   int i;
+  String str = null;
 }
 {
-  //LOOKAHEAD(2) ExtId() [("(" [Args()] ")" | "[" Expr() "]" )]
-  LOOKAHEAD(2) e=ExtId() { return e; }
-| LOOKAHEAD(2) ExtId() "(" [Args()] ")" // Call?
-| LOOKAHEAD(2) e=ExtId() "[" Expr() "]" // Array elements
-| LOOKAHEAD(2) ExtId() "(" [Args()] ")" "[" Expr() "]"
-| "(" e=Expr() ")" { return e; }
+
+ "(" e=Expr() ")" { return e; }
 | i=IntLit()       { return new Ast.IntLit(i);  }
 | b=BoolLit()      { return new Ast.BoolLit(b); }
-| tkn=<ID>         { return new Ast.Id(tkn.image); }
+| LOOKAHEAD(2) tkn=<ID>         { return new Ast.Id(tkn.image); }
+| LOOKAHEAD(2) e2=ExtId() [("(" [elist=Args()] ")" | "[" e3=Expr() "]" )]
+      {
+        if(e2 instanceof Ast.Id) {
+          e2 = new Ast.This();
+          str = ((Ast.Id)e2).nm;
+        } else if (e instanceof Ast.Field) {
+          e2 = ((Ast.Field)e).obj;
+          str = ((Ast.Field)e).nm;
+        }
+        return new Ast.Call(e2, str, elist);
+      }
 }
 
 // ExtId -> ["this" "."] <ID> {"." <ID>}
@@ -447,15 +487,21 @@ Ast.Exp H():
 Ast.Exp ExtId():
 {
   Token tkn;
-  Ast.Exp e;
+  Ast.Exp e1 = null;
+  Ast.Exp e2 = null;
 }
 {
-  // this . <ID>        indicates a Call
-  // <ID> . <ID>        indicates a field
-  // this . <ID> . <ID> indicates ???
-  // ["this" "."] <ID> ("." <ID>)*
-  "this" "." e=<ID>                    { return new Ast.This();             }
-| ["this" "."] e=<ID> ("." tkn=<ID>)*  { return new Ast.Field(e, tkn.image); }
+  ["this" {e1=new Ast.This();} "."] tkn=<ID>
+        {
+          if (e1 == null) {
+            e2 = new Ast.Id(tkn.image);
+          } else {
+            e2 = new Ast.Field(e1, tkn.image);
+          }
+        }
+
+  ("." tkn=<ID> { e1 = new Ast.Field(e2, tkn.image); })*
+  {return e1;}
 }
 
 int IntLit(): {Token tkn;}

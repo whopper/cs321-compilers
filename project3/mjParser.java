@@ -376,8 +376,15 @@ public class mjParser implements mjParserConstants {
   List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
   Ast.Stmt s1;
   Ast.Stmt s2=null;
+  Ast.Stmt s3;
+
   Ast.Exp e=null;
+  Ast.Exp e1=null;
+  Ast.Exp e2=null;
+  Ast.Exp e3=null;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   Ast.PrArg pr=null;
+  String str = null;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 57:
       jj_consume_token(57);
@@ -401,11 +408,11 @@ public class mjParser implements mjParserConstants {
                   slist.add(s1);
       }
       jj_consume_token(58);
-                                           {if (true) return new Ast.Block(slist);}
+                                          {if (true) return new Ast.Block(slist);}
       break;
     case 18:
     case ID:
-      ExtId();
+      e = ExtId();
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case 53:
         jj_consume_token(53);
@@ -418,7 +425,7 @@ public class mjParser implements mjParserConstants {
         case 37:
         case 42:
         case 53:
-          Args();
+          elist = Args();
           break;
         default:
           jj_la1[14] = jj_gen;
@@ -426,21 +433,35 @@ public class mjParser implements mjParserConstants {
         }
         jj_consume_token(54);
         jj_consume_token(50);
+        if(e instanceof Ast.Id) {
+          e2 = new Ast.This();
+          str = ((Ast.Id)e2).nm;
+        } else if (e instanceof Ast.Field) {
+          e2 = ((Ast.Field)e).obj;
+          str = ((Ast.Field)e).nm;
+        }
+
+        s3 = new Ast.CallStmt(e2, str, elist);
         break;
       case 49:
       case 55:
         switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
         case 55:
           jj_consume_token(55);
-          Expr();
+          e1 = Expr();
           jj_consume_token(56);
           break;
         default:
           jj_la1[15] = jj_gen;
           ;
         }
+      if (e1 != null) {
+        e2 = new Ast.ArrayElm(e, e1);
+      } else {
+        e2 = e;
+      }
         jj_consume_token(49);
-        InitExpr();
+        e3 = InitExpr();
         jj_consume_token(50);
         break;
       default:
@@ -448,6 +469,8 @@ public class mjParser implements mjParserConstants {
         jj_consume_token(-1);
         throw new ParseException();
       }
+                            s3 = new Ast.Assign(e1, e2);
+                                                            {if (true) return s3;}
       break;
     case 19:
       jj_consume_token(19);
@@ -472,7 +495,7 @@ public class mjParser implements mjParserConstants {
       e = Expr();
       jj_consume_token(54);
       s1 = Stmt();
-                                       {if (true) return new Ast.While(e, s1);}
+                                                       {if (true) return new Ast.While(e, s1);}
       break;
     case 27:
       jj_consume_token(27);
@@ -519,7 +542,7 @@ public class mjParser implements mjParserConstants {
         ;
       }
       jj_consume_token(50);
-                             {if (true) return new Ast.Return(e);}
+                                                       {if (true) return new Ast.Return(e);}
       break;
     default:
       jj_la1[20] = jj_gen;
@@ -531,8 +554,11 @@ public class mjParser implements mjParserConstants {
 
 // Args -> Expr {"," Expr}
 //
-  static final public void Args() throws ParseException {
-    Expr();
+  static final public List<Ast.Exp> Args() throws ParseException {
+  Ast.Exp e1;
+  Ast.Exp e2;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
+    e1 = Expr();
     label_10:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -544,8 +570,11 @@ public class mjParser implements mjParserConstants {
         break label_10;
       }
       jj_consume_token(51);
-      Expr();
+      e2 = Expr();
+                            elist.add(e2);
     }
+                                                {if (true) return elist;}
+    throw new Error("Missing return statement in function");
   }
 
 // PrintArg -> Expr | <STRLIT>
@@ -563,7 +592,7 @@ public class mjParser implements mjParserConstants {
     case 42:
     case 53:
       e = Expr();
-                {if (true) return e;}
+                  {if (true) return e;}
       break;
     case STRLIT:
       tkn = jj_consume_token(STRLIT);
@@ -897,81 +926,81 @@ public class mjParser implements mjParserConstants {
 
   static final public Ast.Exp H() throws ParseException {
   Token tkn;
-  Ast.Exp e, eArg, eExpr;
+  Ast.Exp e=null, e2=null, e3=null, eExpr=null;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   boolean b;
   int i;
-    if (jj_2_6(2)) {
-      e = ExtId();
-                           {if (true) return e;}
-    } else if (jj_2_7(2)) {
-      ExtId();
+  String str = null;
+    switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+    case 53:
       jj_consume_token(53);
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case 18:
-      case 25:
-      case 26:
-      case INTLIT:
-      case ID:
-      case 37:
-      case 42:
-      case 53:
-        Args();
-        break;
-      default:
-        jj_la1[36] = jj_gen;
-        ;
-      }
+      e = Expr();
       jj_consume_token(54);
-    } else if (jj_2_8(2)) {
-      e = ExtId();
-      jj_consume_token(55);
-      Expr();
-      jj_consume_token(56);
-    } else if (jj_2_9(2)) {
-      ExtId();
-      jj_consume_token(53);
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case 18:
-      case 25:
-      case 26:
-      case INTLIT:
-      case ID:
-      case 37:
-      case 42:
-      case 53:
-        Args();
-        break;
-      default:
-        jj_la1[37] = jj_gen;
-        ;
-      }
-      jj_consume_token(54);
-      jj_consume_token(55);
-      Expr();
-      jj_consume_token(56);
-    } else {
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case 53:
-        jj_consume_token(53);
-        e = Expr();
-        jj_consume_token(54);
-                     {if (true) return e;}
-        break;
-      case INTLIT:
-        i = IntLit();
+                    {if (true) return e;}
+      break;
+    case INTLIT:
+      i = IntLit();
                      {if (true) return new Ast.IntLit(i);}
-        break;
-      case 25:
-      case 26:
-        b = BoolLit();
+      break;
+    case 25:
+    case 26:
+      b = BoolLit();
                      {if (true) return new Ast.BoolLit(b);}
-        break;
-      case ID:
+      break;
+    default:
+      jj_la1[39] = jj_gen;
+      if (jj_2_6(2)) {
         tkn = jj_consume_token(ID);
-                     {if (true) return new Ast.Id(tkn.image);}
-        break;
-      default:
-        jj_la1[38] = jj_gen;
+                                  {if (true) return new Ast.Id(tkn.image);}
+      } else if (jj_2_7(2)) {
+        e2 = ExtId();
+        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+        case 53:
+        case 55:
+          switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+          case 53:
+            jj_consume_token(53);
+            switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+            case 18:
+            case 25:
+            case 26:
+            case INTLIT:
+            case ID:
+            case 37:
+            case 42:
+            case 53:
+              elist = Args();
+              break;
+            default:
+              jj_la1[36] = jj_gen;
+              ;
+            }
+            jj_consume_token(54);
+            break;
+          case 55:
+            jj_consume_token(55);
+            e3 = Expr();
+            jj_consume_token(56);
+            break;
+          default:
+            jj_la1[37] = jj_gen;
+            jj_consume_token(-1);
+            throw new ParseException();
+          }
+          break;
+        default:
+          jj_la1[38] = jj_gen;
+          ;
+        }
+        if(e2 instanceof Ast.Id) {
+          e2 = new Ast.This();
+          str = ((Ast.Id)e2).nm;
+        } else if (e instanceof Ast.Field) {
+          e2 = ((Ast.Field)e).obj;
+          str = ((Ast.Field)e).nm;
+        }
+        {if (true) return new Ast.Call(e2, str, elist);}
+      } else {
         jj_consume_token(-1);
         throw new ParseException();
       }
@@ -983,45 +1012,39 @@ public class mjParser implements mjParserConstants {
 //
   static final public Ast.Exp ExtId() throws ParseException {
   Token tkn;
-  Ast.Exp e;
+  Ast.Exp e1 = null;
+  Ast.Exp e2 = null;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 18:
       jj_consume_token(18);
+           e1=new Ast.This();
       jj_consume_token(52);
-      e = jj_consume_token(ID);
-                                         {if (true) return new Ast.This();}
-      break;
-    case ID:
-      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-      case 18:
-        jj_consume_token(18);
-        jj_consume_token(52);
-        break;
-      default:
-        jj_la1[39] = jj_gen;
-        ;
-      }
-      e = jj_consume_token(ID);
-      label_18:
-      while (true) {
-        switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
-        case 52:
-          ;
-          break;
-        default:
-          jj_la1[40] = jj_gen;
-          break label_18;
-        }
-        jj_consume_token(52);
-        tkn = jj_consume_token(ID);
-      }
-                                         {if (true) return new Ast.Field(e, tkn.image);}
       break;
     default:
-      jj_la1[41] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+      jj_la1[40] = jj_gen;
+      ;
     }
+    tkn = jj_consume_token(ID);
+          if (e1 == null) {
+            e2 = new Ast.Id(tkn.image);
+          } else {
+            e2 = new Ast.Field(e1, tkn.image);
+          }
+    label_18:
+    while (true) {
+      switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
+      case 52:
+        ;
+        break;
+      default:
+        jj_la1[41] = jj_gen;
+        break label_18;
+      }
+      jj_consume_token(52);
+      tkn = jj_consume_token(ID);
+                  e1 = new Ast.Field(e2, tkn.image);
+    }
+   {if (true) return e1;}
     throw new Error("Missing return statement in function");
   }
 
@@ -1100,26 +1123,12 @@ public class mjParser implements mjParserConstants {
     finally { jj_save(6, xla); }
   }
 
-  static private boolean jj_2_8(int xla) {
-    jj_la = xla; jj_lastpos = jj_scanpos = token;
-    try { return !jj_3_8(); }
-    catch(LookaheadSuccess ls) { return true; }
-    finally { jj_save(7, xla); }
-  }
-
-  static private boolean jj_2_9(int xla) {
-    jj_la = xla; jj_lastpos = jj_scanpos = token;
-    try { return !jj_3_9(); }
-    catch(LookaheadSuccess ls) { return true; }
-    finally { jj_save(8, xla); }
-  }
-
-  static private boolean jj_3R_31() {
+  static private boolean jj_3R_34() {
     if (jj_scan_token(ID)) return true;
     return false;
   }
 
-  static private boolean jj_3R_30() {
+  static private boolean jj_3R_33() {
     if (jj_3R_21()) return true;
     if (jj_scan_token(55)) return true;
     return false;
@@ -1135,70 +1144,62 @@ public class mjParser implements mjParserConstants {
     return false;
   }
 
-  static private boolean jj_3R_23() {
+  static private boolean jj_3R_24() {
     Token xsp;
     xsp = jj_scanpos;
     if (jj_3_4()) {
     jj_scanpos = xsp;
-    if (jj_3R_30()) {
+    if (jj_3R_33()) {
     jj_scanpos = xsp;
-    if (jj_3R_31()) return true;
+    if (jj_3R_34()) return true;
     }
     }
     return false;
   }
 
-  static private boolean jj_3R_32() {
-    if (jj_scan_token(18)) return true;
+  static private boolean jj_3R_30() {
     if (jj_scan_token(52)) return true;
     return false;
   }
 
-  static private boolean jj_3R_29() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_32()) jj_scanpos = xsp;
-    if (jj_scan_token(ID)) return true;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_33()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  static private boolean jj_3R_28() {
-    if (jj_scan_token(18)) return true;
-    if (jj_scan_token(52)) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_22() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_28()) {
-    jj_scanpos = xsp;
-    if (jj_3R_29()) return true;
-    }
-    return false;
-  }
-
-  static private boolean jj_3R_25() {
+  static private boolean jj_3R_26() {
     if (jj_scan_token(14)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_31() {
+    if (jj_scan_token(53)) return true;
     return false;
   }
 
   static private boolean jj_3R_20() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_24()) {
+    if (jj_3R_25()) {
     jj_scanpos = xsp;
-    if (jj_3R_25()) return true;
+    if (jj_3R_26()) return true;
     }
     return false;
   }
 
-  static private boolean jj_3R_24() {
-    if (jj_3R_23()) return true;
+  static private boolean jj_3R_25() {
+    if (jj_3R_24()) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_23() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_31()) {
+    jj_scanpos = xsp;
+    if (jj_3R_32()) return true;
+    }
+    return false;
+  }
+
+  static private boolean jj_3R_29() {
+    if (jj_scan_token(18)) return true;
+    if (jj_scan_token(52)) return true;
     return false;
   }
 
@@ -1208,9 +1209,26 @@ public class mjParser implements mjParserConstants {
     return false;
   }
 
-  static private boolean jj_3R_19() {
-    if (jj_3R_23()) return true;
+  static private boolean jj_3R_22() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_29()) jj_scanpos = xsp;
     if (jj_scan_token(ID)) return true;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_30()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  static private boolean jj_3R_19() {
+    if (jj_3R_24()) return true;
+    if (jj_scan_token(ID)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_32() {
+    if (jj_scan_token(55)) return true;
     return false;
   }
 
@@ -1220,36 +1238,11 @@ public class mjParser implements mjParserConstants {
     return false;
   }
 
-  static private boolean jj_3_9() {
-    if (jj_3R_22()) return true;
-    if (jj_scan_token(53)) return true;
-    return false;
-  }
-
-  static private boolean jj_3_8() {
-    if (jj_3R_22()) return true;
-    if (jj_scan_token(55)) return true;
-    return false;
-  }
-
   static private boolean jj_3_7() {
     if (jj_3R_22()) return true;
-    if (jj_scan_token(53)) return true;
-    return false;
-  }
-
-  static private boolean jj_3_6() {
-    if (jj_3R_22()) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_33() {
-    if (jj_scan_token(52)) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_27() {
-    if (jj_scan_token(16)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_23()) jj_scanpos = xsp;
     return false;
   }
 
@@ -1258,17 +1251,27 @@ public class mjParser implements mjParserConstants {
     return false;
   }
 
+  static private boolean jj_3R_28() {
+    if (jj_scan_token(16)) return true;
+    return false;
+  }
+
+  static private boolean jj_3_6() {
+    if (jj_scan_token(ID)) return true;
+    return false;
+  }
+
   static private boolean jj_3R_21() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_3R_26()) {
+    if (jj_3R_27()) {
     jj_scanpos = xsp;
-    if (jj_3R_27()) return true;
+    if (jj_3R_28()) return true;
     }
     return false;
   }
 
-  static private boolean jj_3R_26() {
+  static private boolean jj_3R_27() {
     if (jj_scan_token(15)) return true;
     return false;
   }
@@ -1293,12 +1296,12 @@ public class mjParser implements mjParserConstants {
       jj_la1_init_1();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0x400,0x800,0x18000,0x2000,0x18000,0x0,0x86c0000,0x86c0000,0x2000,0x0,0x1c000,0x18000,0x18000,0x86c0000,0x6040000,0x0,0x0,0x100000,0x6040000,0x6040000,0x86c0000,0x0,0x6040000,0x6060000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6040000,0x6040000,0x6000000,0x40000,0x0,0x40000,0x6000000,};
+      jj_la1_0 = new int[] {0x400,0x800,0x18000,0x2000,0x18000,0x0,0x86c0000,0x86c0000,0x2000,0x0,0x1c000,0x18000,0x18000,0x86c0000,0x6040000,0x0,0x0,0x100000,0x6040000,0x6040000,0x86c0000,0x0,0x6040000,0x6060000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6040000,0x0,0x0,0x6000000,0x40000,0x0,0x6000000,};
    }
    private static void jj_la1_init_1() {
-      jj_la1_1 = new int[] {0x0,0x0,0x8,0x0,0x8,0x80000,0x2000008,0x2000008,0x0,0x20000,0x8,0x8,0x0,0x2000008,0x200429,0x800000,0xa20000,0x0,0x20042b,0x200429,0x2000008,0x80000,0x20042b,0x200429,0x200,0x100,0x1800,0x1800,0x1e000,0x1e000,0x30,0x30,0xc0,0xc0,0x420,0x420,0x200429,0x200429,0x200009,0x0,0x100000,0x8,0x0,};
+      jj_la1_1 = new int[] {0x0,0x0,0x8,0x0,0x8,0x80000,0x2000008,0x2000008,0x0,0x20000,0x8,0x8,0x0,0x2000008,0x200429,0x800000,0xa20000,0x0,0x20042b,0x200429,0x2000008,0x80000,0x20042b,0x200429,0x200,0x100,0x1800,0x1800,0x1e000,0x1e000,0x30,0x30,0xc0,0xc0,0x420,0x420,0x200429,0xa00000,0xa00000,0x200001,0x0,0x100000,0x0,};
    }
-  static final private JJCalls[] jj_2_rtns = new JJCalls[9];
+  static final private JJCalls[] jj_2_rtns = new JJCalls[7];
   static private boolean jj_rescan = false;
   static private int jj_gc = 0;
 
@@ -1550,7 +1553,7 @@ public class mjParser implements mjParserConstants {
 
   static private void jj_rescan_token() {
     jj_rescan = true;
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 7; i++) {
     try {
       JJCalls p = jj_2_rtns[i];
       do {
@@ -1564,8 +1567,6 @@ public class mjParser implements mjParserConstants {
             case 4: jj_3_5(); break;
             case 5: jj_3_6(); break;
             case 6: jj_3_7(); break;
-            case 7: jj_3_8(); break;
-            case 8: jj_3_9(); break;
           }
         }
         p = p.next;
