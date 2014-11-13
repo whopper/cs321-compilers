@@ -522,6 +522,7 @@ public class mjParser implements mjParserConstants {
   Ast.Exp e2;
   List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
     e1 = Expr();
+             elist.add(e1);
     label_8:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -534,9 +535,9 @@ public class mjParser implements mjParserConstants {
       }
       jj_consume_token(51);
       e2 = Expr();
-                            elist.add(e2);
+                                             elist.add(e2);
     }
-                                                {if (true) return elist;}
+                                                                 {if (true) return elist;}
     throw new Error("Missing return statement in function");
   }
 
@@ -756,15 +757,6 @@ public class mjParser implements mjParserConstants {
       jj_consume_token(54);
                                   {if (true) return e1;}
       break;
-    case INTLIT:
-      i = IntLit();
-                                  {if (true) return new Ast.IntLit(i);}
-      break;
-    case 25:
-    case 26:
-      b = BoolLit();
-                                  {if (true) return new Ast.BoolLit(b);}
-      break;
     case 18:
     case ID:
       e1 = ExtId();
@@ -812,6 +804,15 @@ public class mjParser implements mjParserConstants {
       }
   {if (true) return e1;}
       break;
+    case INTLIT:
+      i = IntLit();
+                                  {if (true) return new Ast.IntLit(i);}
+      break;
+    case 25:
+    case 26:
+      b = BoolLit();
+                                  {if (true) return new Ast.BoolLit(b);}
+      break;
     default:
       jj_la1[33] = jj_gen;
       jj_consume_token(-1);
@@ -824,9 +825,11 @@ public class mjParser implements mjParserConstants {
 //
   static final public Ast.Exp ExtId() throws ParseException {
   Token tkn;
+  Token tkn2 = null;
   Ast.Exp e1 = null;
   Ast.Exp e2 = null;
-  Ast.Exp e3 = null;
+  List<Ast.Exp> fieldList = new ArrayList<Ast.Exp>();
+  List<Token> IDList = new ArrayList<Token>();
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 18:
       jj_consume_token(18);
@@ -854,11 +857,20 @@ public class mjParser implements mjParserConstants {
         break label_14;
       }
       jj_consume_token(52);
-      tkn = jj_consume_token(ID);
-                  e3=new Ast.Field(e2, tkn.image);
+      tkn2 = jj_consume_token(ID);
+                  IDList.add(tkn2); System.out.println("adding: " + tkn2.image);
     }
-    if(e3 != null) {
-      {if (true) return new Ast.Field(e2, tkn.image);}
+    if(tkn2 != null) {
+      if(IDList.size() == 1) {
+        {if (true) return new Ast.Field(e2, IDList.get(0).image);}
+      } else {
+        Ast.Field outerField = new Ast.Field(e2, IDList.get(0).image);
+        Ast.Field curField = outerField;
+        for(int i=1; i<IDList.size(); ++i) {
+          curField = new Ast.Field(curField, IDList.get(i).image);
+        }
+        {if (true) return curField;}
+      }
     } else {
       {if (true) return e2;}
     }

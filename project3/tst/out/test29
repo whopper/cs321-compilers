@@ -3,7 +3,7 @@ ClassDecl Test
   MethodDecl void main ()
    VarDecl IntType A ()
    VarDecl (ObjType A) a (NewObj A)
-   Assign (Field a A)  (Call a A ())
+   Assign (Field a A)  (Call a A (1 ))
    Assign A (Field a A) 
    Print A
 ClassDecl A 

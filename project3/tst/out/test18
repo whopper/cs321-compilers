@@ -8,4 +8,4 @@ ClassDecl B
    Return a
 ClassDecl A B
   MethodDecl IntType go ()
-   Return (Call This back ())
+   Return (Call This back (2 ))

@@ -7,7 +7,7 @@ ClassDecl B
   MethodDecl IntType go ()
    VarDecl (ObjType B2) b ()
    Assign b (NewObj B2)
-   Return (Call b value ())
+   Return (Call b value (true ))
 ClassDecl B2 
   VarDecl IntType i ()
   MethodDecl IntType value ((Param BoolType cond) )

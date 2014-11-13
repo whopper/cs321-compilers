@@ -296,7 +296,7 @@ List<Ast.Exp> Args():
   List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
 }
 {
-  e1=Expr() ("," e2=Expr() {elist.add(e2);})* { return elist; }
+  e1=Expr() {elist.add(e1);} ("," e2=Expr() {elist.add(e2);})* { return elist; }
 }
 
 // PrintArg -> Expr | <STRLIT>
@@ -374,8 +374,6 @@ Ast.Exp Factor():
 {
 u=UnOp() e2=Factor()            { return new Ast.Unop(u, e2); }
 | "(" e1=Expr() ")"             { return e1; }
-| i=IntLit()                    { return new Ast.IntLit(i);  }
-| b=BoolLit()                   { return new Ast.BoolLit(b); }
 | e1=ExtId()
     ("(" [elist=Args()] ")"
       {
@@ -390,6 +388,9 @@ u=UnOp() e2=Factor()            { return new Ast.Unop(u, e2); }
       }
 | ["[" e2=Expr() "]" {return new Ast.ArrayElm(e1,e2);} ])
 { return e1; }
+| i=IntLit()                    { return new Ast.IntLit(i);  }
+| b=BoolLit()                   { return new Ast.BoolLit(b); }
+
 /*
     {
       if(e2 != null) {                // This is an array element
@@ -410,9 +411,11 @@ u=UnOp() e2=Factor()            { return new Ast.Unop(u, e2); }
 Ast.Exp ExtId():
 {
   Token tkn;
+  Token tkn2 = null;
   Ast.Exp e1 = null;
   Ast.Exp e2 = null;
-  Ast.Exp e3 = null;
+  List<Ast.Exp> fieldList = new ArrayList<Ast.Exp>();
+  List<Token> IDList = new ArrayList<Token>();
 }
 {
   ["this" {e1=new Ast.This();} "."] tkn=<ID>
@@ -424,9 +427,18 @@ Ast.Exp ExtId():
           }
         }
 
-  ("." tkn=<ID> { e3=new Ast.Field(e2, tkn.image); })*
-  { if(e3 != null) {
-      return new Ast.Field(e2, tkn.image);
+  ("." tkn2=<ID> {IDList.add(tkn2); System.out.println("adding: " + tkn2.image);})*
+  { if(tkn2 != null) {
+      if(IDList.size() == 1) {
+        return new Ast.Field(e2, IDList.get(0).image);
+      } else {
+        Ast.Field outerField = new Ast.Field(e2, IDList.get(0).image);
+        Ast.Field curField = outerField;
+        for(int i=1; i<IDList.size(); ++i) {
+          curField = new Ast.Field(curField, IDList.get(i).image);
+        }
+        return curField;
+      }
     } else {
       return e2;
     }

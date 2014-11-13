@@ -2,7 +2,7 @@
 ClassDecl Test 
   MethodDecl void main ()
    VarDecl (ObjType A) a (NewObj A)
-   VarDecl IntType i (Call a foo ())
+   VarDecl IntType i (Call a foo (2 ))
    Print i
 ClassDecl A 
   MethodDecl IntType foo ((Param IntType i) )
@@ -11,4 +11,4 @@ ClassDecl A
    Else
     Return 3
   MethodDecl IntType bar ()
-   Return (Call This foo ())
+   Return (Call This foo (1 ))

@@ -2,7 +2,7 @@
 ClassDecl Test 
   MethodDecl void main ()
    VarDecl (ObjType A) a (NewObj A)
-   CallStmt a setk ()
+   CallStmt a setk (5 )
    Print (Field a j) 
    Print (Field a k) 
    Print (Field a l) 

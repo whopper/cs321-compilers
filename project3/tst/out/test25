@@ -6,7 +6,7 @@ ClassDecl Test
 ClassDecl B 
   MethodDecl IntType go ()
    VarDecl (ObjType B2) b2 (NewObj B2)
-   Return (Call b2 value (2 3 ))
+   Return (Call b2 value (1 2 3 ))
 ClassDecl B2 
   MethodDecl IntType value ((Param IntType i) (Param IntType j) (Param IntType k) )
    Return (Binop + (Binop + i j) k)

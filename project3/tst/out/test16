@@ -2,7 +2,7 @@
 ClassDecl Test 
   MethodDecl void main ()
    VarDecl (ObjType B) b (NewObj B)
-   VarDecl IntType i (Call b foo ())
+   VarDecl IntType i (Call b foo (1 ))
    Print i
 ClassDecl B 
   VarDecl IntType i ()

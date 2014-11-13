@@ -3,8 +3,8 @@ ClassDecl Test
   MethodDecl void main ()
    VarDecl (ObjType A) a (NewObj B)
    VarDecl (ObjType B) b (NewObj B)
-   VarDecl IntType i (Call a g ())
-   VarDecl IntType j (Call b g ())
+   VarDecl IntType i (Call a g (2 ))
+   VarDecl IntType j (Call b g (2 ))
    Print i
    Print j
 ClassDecl A 
@@ -12,7 +12,7 @@ ClassDecl A
   MethodDecl IntType f ((Param IntType i) )
    Return (Binop - i 1)
   MethodDecl IntType g ((Param IntType i) )
-   Return (Call This f ())
+   Return (Call This f (i ))
 ClassDecl B A
   VarDecl IntType x 2
   MethodDecl IntType f ((Param IntType i) )

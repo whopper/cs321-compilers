@@ -4,8 +4,8 @@ ClassDecl Test
    VarDecl (ObjType A) a (NewObj A)
    VarDecl IntType i ()
    VarDecl IntType j ()
-   Assign i (Call a foo ())
-   Assign j (Call a bar ())
+   Assign i (Call a foo (1 ))
+   Assign j (Call a bar (1 ))
    Print i
    Print j
 ClassDecl A 

@@ -6,7 +6,7 @@ ClassDecl Test
    VarDecl IntType i ()
    VarDecl IntType j ()
    Assign b true
-   Assign i (Call a foo (2 ))
+   Assign i (Call a foo (1 2 ))
    Assign j (Binop * 2 3)
    Print b
    Print i
