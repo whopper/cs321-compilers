@@ -4,7 +4,7 @@ ClassDecl Test
    VarDecl (ObjType A) x (NewObj A)
    VarDecl (ObjType B) y (NewObj B)
    Print (Field x i) 
-   Print (Field y i) 
+   Print (Field (Field y a)  i) 
 ClassDecl A 
   VarDecl IntType i 1
   VarDecl (ObjType B) b ()

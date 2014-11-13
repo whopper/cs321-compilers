@@ -239,21 +239,15 @@ Ast.Type BasicType(): {}
 Ast.Stmt Stmt():
 {
   Ast.Type t;
-  List<Ast.Param> plist = new ArrayList<Ast.Param>();
-  Ast.Param p;
-  List<Ast.VarDecl> vlist = new ArrayList<Ast.VarDecl>();
-  Ast.VarDecl v;
   List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
   Ast.Stmt s1;
   Ast.Stmt s2=null;
-  Ast.Stmt finalStmt;
-
   Ast.Exp eLeft;
   Ast.Exp e1=null;
   Ast.Exp e2=null;
   Ast.Exp e3=null;
-  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   Ast.PrArg pr=null;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   String str = null;
 }
 {
@@ -269,7 +263,7 @@ Ast.Stmt Stmt():
           return new Ast.Assign(eLeft, e2);
         }
       }
-    | "(" [elist=Args()] ")" ";"          // Possible: eLeft();, eLeft(ArgA, ArgB);
+    | "(" [elist=Args()] ")" ";"  // Possible: eLeft();, eLeft(ArgA, ArgB);
       {
         if(eLeft instanceof Ast.Id) {
           e3  = new Ast.This();    // The object is This
@@ -390,20 +384,6 @@ u=UnOp() e2=Factor()            { return new Ast.Unop(u, e2); }
 { return e1; }
 | i=IntLit()                    { return new Ast.IntLit(i);  }
 | b=BoolLit()                   { return new Ast.BoolLit(b); }
-
-/*
-    {
-      if(e2 != null) {                // This is an array element
-        return new Ast.ArrayElm(e1,e2);
-      } else if(e1 instanceof Ast.Field) {
-        return e1;
-      } else if(e1 instanceof Ast.Id) {     // This is just an ID
-        return e1;
-      }
-    }
-
-*/
-
 }
 
 // ExtId -> ["this" "."] <ID> {"." <ID>}
@@ -427,11 +407,11 @@ Ast.Exp ExtId():
           }
         }
 
-  ("." tkn2=<ID> {IDList.add(tkn2); System.out.println("adding: " + tkn2.image);})*
+  ("." tkn2=<ID> {IDList.add(tkn2);})*
   { if(tkn2 != null) {
       if(IDList.size() == 1) {
         return new Ast.Field(e2, IDList.get(0).image);
-      } else {
+      } else { // There are multiple fields strung together
         Ast.Field outerField = new Ast.Field(e2, IDList.get(0).image);
         Ast.Field curField = outerField;
         for(int i=1; i<IDList.size(); ++i) {

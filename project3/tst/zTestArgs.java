@@ -1,9 +1,22 @@
 // miniJava test program (For CS321 Language and Compiler Design, PSU)
 //
-// Param and local var declarations
+// Mutually dependent class decls
 // 
 class Test {
   public static void main(String[] ignore) {
-    i = a.foo(1, 2);
+    A x = new A();
+    B y = new B();
+    System.out.println(x.i);
+    System.out.println(y.a.i);
+    System.out.println(y.a.i.z);
   }
 }
+
+class A {
+  int i=1;
+  B b;
+}  
+
+class B {
+  A a = new A();
+}  

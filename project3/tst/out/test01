@@ -1,4 +1,4 @@
-as# AST Program
+# AST Program
 ClassDecl Test 
   MethodDecl void main ()
    Print 123

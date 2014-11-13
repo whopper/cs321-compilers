@@ -334,21 +334,15 @@ public class mjParser implements mjParserConstants {
 //
   static final public Ast.Stmt Stmt() throws ParseException {
   Ast.Type t;
-  List<Ast.Param> plist = new ArrayList<Ast.Param>();
-  Ast.Param p;
-  List<Ast.VarDecl> vlist = new ArrayList<Ast.VarDecl>();
-  Ast.VarDecl v;
   List<Ast.Stmt> slist = new ArrayList<Ast.Stmt>();
   Ast.Stmt s1;
   Ast.Stmt s2=null;
-  Ast.Stmt finalStmt;
-
   Ast.Exp eLeft;
   Ast.Exp e1=null;
   Ast.Exp e2=null;
   Ast.Exp e3=null;
-  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   Ast.PrArg pr=null;
+  List<Ast.Exp> elist = new ArrayList<Ast.Exp>();
   String str = null;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case 57:
@@ -858,7 +852,7 @@ public class mjParser implements mjParserConstants {
       }
       jj_consume_token(52);
       tkn2 = jj_consume_token(ID);
-                  IDList.add(tkn2); System.out.println("adding: " + tkn2.image);
+                  IDList.add(tkn2);
     }
     if(tkn2 != null) {
       if(IDList.size() == 1) {
