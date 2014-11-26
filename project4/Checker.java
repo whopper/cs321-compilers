@@ -196,9 +196,10 @@ public class Checker {
   //  2. Recursively check n.flds and n.mthds.
   //
   static void check(Ast.ClassDecl n) throws Exception {
-
-    // ... need code ...
-
+    ClassInfo cur_class = classEnv.get(n.nm);
+    thisCInfo = cur_class;
+    //typeEnv.clear;
+    // Recursively check n.flds and n.mthds
   }
 
   // MethodDecl ---
@@ -225,9 +226,12 @@ public class Checker {
   //  If n.t is ObjType, make sure its corresponding class exists.
   //
   static void check(Ast.Param n) throws Exception {
-
-    // ... need code ...
-
+    if (n.t instanceof Ast.ObjType) {
+      ClassInfo obj = classEnv.get(n.nm);
+      if (obj == null) {
+        throw new TypeException("Param: type " + n.t + " doesn't exist");
+      }
+    }
   }
 
   // VarDecl ---
@@ -239,9 +243,21 @@ public class Checker {
   //  2. If n.init exists, make sure it is assignable to the var.
   //
   static void check(Ast.VarDecl n) throws Exception {
+    if (n.t instanceof Ast.ObjType) {
+      ClassInfo obj = classEnv.get(n.nm);
+      if (obj == null) {
+        throw new TypeException("VarDecl: type " + n.t + " doesn't exist");
+      }
+    }
 
-    // ... need code ...
-
+  // TODO: How do I call assignable when init is an exp?
+/*
+    if (n.init != null) {
+      if (!assignable(n.t, n.init)) {
+        throw new TypeException("VarDecl: init expr: " + n.init + "not assignable");
+      }
+    }
+*/
   }
 
   // STATEMENTS
@@ -262,11 +278,9 @@ public class Checker {
 
   // Block ---
   //  Stmt[] stmts;
-  //
+  // Recursively check each stmt in the block?
   static void check(Ast.Block n) throws Exception {
-
-    // ... need code ...
-
+     // Pseudo: for(stmt in stmts : check(stmt)
   }
 
   // Assign ---
@@ -276,9 +290,12 @@ public class Checker {
   //  Make sure n.rhs is assignable to n.lhs.
   //
   static void check(Ast.Assign n) throws Exception {
-
-    // ... need code ...
-
+    // TODO: How do I check assignability of Exps?
+  /*
+    if (!assignable()) {
+      throw new  TypeException("Can't assign " + n.rhs + " to " + n.lhs);
+    }
+  */
   }
 
   // CallStmt ---
@@ -292,9 +309,7 @@ public class Checker {
   //     the formal parameters.
   //
   static void check(Ast.CallStmt n) throws Exception {
-
-    // ... need code ...
-
+    // TODO
   }
 
   // If ---
@@ -304,9 +319,10 @@ public class Checker {
   //  Make sure n.cond is boolean.
   //
   static void check(Ast.If n) throws Exception {
-
-    // ... need code ...
-
+    // TODO: uhhh, is this right?
+    if (!(n.cond instanceof Ast.BoolLit)) {
+      throw new TypeException("If: cond must be boolean");
+    }
   }
 
   // While ---
@@ -316,9 +332,9 @@ public class Checker {
   //  Make sure n.cond is boolean.
   //
   static void check(Ast.While n) throws Exception {
-
-    // ... need code ...
-
+    if (!(n.cond instanceof Ast.BoolLit)) {
+      throw new TypeException("While: cond must be boolean");
+    }
   }
 
   // Print ---
@@ -327,9 +343,11 @@ public class Checker {
   //  Make sure n.arg is integer, boolean, or string.
   //
   static void check(Ast.Print n) throws Exception {
+    if (!((n.arg instanceof Ast.IntLit) && (n.arg instanceof Ast.BoolLit)
+        && (n.arg instanceof Ast.StrLit))) {
 
-    // ... need code ...
-
+      throw new TypeException("PrArg must be int, bool, or string");
+    }
   }
 
   // Return ---
@@ -338,9 +356,9 @@ public class Checker {
   //  If n.val exists, make sure it matches the expected return type.
   //
   static void check(Ast.Return n) throws Exception {
-
-    // ... need code ...
-
+    //if (n.val != null) {
+      // TODO: How do I figure out what method this return is in?
+    //}
   }
 
   // EXPRESSIONS
@@ -369,9 +387,26 @@ public class Checker {
   //  Make sure n.e1's and n.e2's types are legal with respect to n.op.
   //
   static Ast.Type check(Ast.Binop n) throws Exception {
+    if (n.op.equals("&&") || n.op.equals("||")
+        || n.op.equals("==") || n.op.equals("!=")) {
 
-    // ... need code ...
-
+      // Could be either int or bool in this case
+      if (n.e1 instanceof Ast.IntLit && n.e2 instanceof Ast.IntLit
+          || n.e1 instanceof Ast.BoolLit && n.e2 instanceof Ast.BoolLit) {
+        // TODO: What do I return here?
+        return new Ast.IntType();
+      } else {
+        throw new TypeException("Illegal Binop statement");
+      }
+    } else {
+      if (n.e1 instanceof Ast.IntLit && n.e2 instanceof Ast.IntLit) {
+        // TODO: What do I return here?
+        return new Ast.IntType();
+      } else {
+        throw new TypeException("Illegal Binop statement: must be integer");
+      }
+      // Must be integer
+    }
   }
 
   // Unop ---
@@ -381,9 +416,8 @@ public class Checker {
   //  Make sure n.e's type is legal with respect to n.op.
   //
   static Ast.Type check(Ast.Unop n) throws Exception {
-
-    // ... need code ...
-
+    // TODO
+    return new Ast.IntType();
   }
 
   // Call ---
@@ -395,9 +429,8 @@ public class Checker {
   //  In addition, this routine needs to return the method's return type.
   //
   static Ast.Type check(Ast.Call n) throws Exception {
-
-    // ... need code ...
-
+    // TODO: How do I get method's return type?
+    return new Ast.IntType();
   }
 
   // NewArray ---
@@ -410,9 +443,16 @@ public class Checker {
   //  miniJava parser does not, so these checks are not very meaningful.)
   //
   static Ast.Type check(Ast.NewArray n) throws Exception {
-
-    // ... need code ...
-
+    if (n.et instanceof Ast.IntType || n.et instanceof Ast.BoolType) {
+      if (n.len >= 0) {
+        // TODO: What do I return here?
+        return new Ast.ArrayType(new Ast.IntType());
+      } else {
+        throw new TypeException("Array length is negative");
+      }
+    } else {
+      throw new TypeException("not an integer or boolean array");
+    }
   }
 
   // ArrayElm ---
@@ -421,9 +461,17 @@ public class Checker {
   //  Varify that n.ar is array and n.idx is integer.
   //
   static Ast.Type check(Ast.ArrayElm n) throws Exception {
-
-    // ... need code ...
-
+    // Might need to search for NewArray declaration
+    if (n.ar instanceof Ast.NewArray) {
+      if (n.idx instanceof Ast.IntLit) {
+        // TODO: What do I return here?
+        return new Ast.ArrayType(new Ast.IntType());
+      } else {
+        throw new TypeException("Array doesn't hold integers");
+      }
+    } else {
+      throw new TypeException("n.ar is not an array");
+    }
   }
 
   // NewObj ---
@@ -432,9 +480,13 @@ public class Checker {
   //  Verify that the corresponding class exists.
   //
   static Ast.Type check(Ast.NewObj n) throws Exception {
-
-    // ... need code ...
-
+    System.out.println("IN NewObj");
+    ClassInfo thisClass = classEnv.get(n.nm);
+    if (thisClass != null) {
+      return new Ast.ObjType(n.nm);
+    } else {
+      throw new TypeException("Class does not exist!");
+    }
   }
 
   // Field ---
@@ -445,7 +497,17 @@ public class Checker {
   //  2. Verify that n.nm is a valid field in the object.
   //
   static Ast.Type check(Ast.Field n) throws Exception {
-    
+    ClassInfo objClass = classEnv.get(n.nm);
+    if(objClass != null) {
+      Ast.VarDecl cur_decl = objClass.findFieldDecl(n.nm);
+      if(cur_decl != null) {
+        return new Ast.ObjType(n.nm);
+      } else {
+        throw new TypeException("n.nm is not a valid field in this object");
+      }
+    } else {
+      throw new TypeException("n.obj does not have a corresponding class");
+    }
   }
 
   // Id ---
@@ -463,8 +525,12 @@ public class Checker {
     } else {
       // Doesn't exist in typeEnv map, so this ID is a field.
       Ast.VarDecl cur_decl = thisCInfo.findFieldDecl(n.nm);
-      Ast.Type field_type = cur_decl.t;
-      return field_type;
+      if(cur_decl != null) {
+        Ast.Type field_type = cur_decl.t;
+        return field_type;
+      } else {
+        throw new TypeException("Variable not declared");
+      }
     }
   }
 
