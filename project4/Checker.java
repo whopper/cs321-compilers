@@ -108,6 +108,7 @@ public class Checker {
     } else if((tdst instanceof Ast.ArrayType) && (tsrc instanceof Ast.ArrayType)) {
       return(assignable(((Ast.ArrayType)tdst).et, ((Ast.ArrayType)tsrc).et));
     } else if((tdst instanceof Ast.ObjType) && (tsrc instanceof Ast.ObjType)) {
+      // TODO: How to get ancestor class names??
       if(((Ast.ObjType)tdst).nm == ((Ast.ObjType)tsrc).nm /*|| tsrc ancestor name*/) {
         return true;
       } else {
@@ -198,8 +199,17 @@ public class Checker {
   static void check(Ast.ClassDecl n) throws Exception {
     ClassInfo cur_class = classEnv.get(n.nm);
     thisCInfo = cur_class;
-    //typeEnv.clear;
-    // Recursively check n.flds and n.mthds
+    typeEnv.clear();
+
+    // Check each field
+    for (Ast.VarDecl vd: n.flds) {
+      check(vd);
+    }
+
+    // Check each method
+    for (Ast.MethodDecl md: n.mthds) {
+      check(md);
+    }
   }
 
   // MethodDecl ---
@@ -214,9 +224,24 @@ public class Checker {
   //  3. For each VarDecl, add a new name-type binding to typeEnv.
   //
   static void check(Ast.MethodDecl n) throws Exception {
+    System.out.println("Checking method: " + n.nm);
+    thisMDecl = n;
+    typeEnv.clear();
 
-    // ... need code ...
+    for(Ast.Param p: n.params) {
+      check(p);
+    }
 
+    for(Ast.VarDecl vd: n.vars) {
+      System.out.println("Var: " + vd.nm);
+      check(vd);
+      typeEnv.put(vd.nm, vd.t);
+    }
+
+    for(Ast.Stmt s: n.stmts) {
+      System.out.println("calling checkStmt: " + s);
+      check(s);
+    }
   }
 
   // Param ---
@@ -229,7 +254,7 @@ public class Checker {
     if (n.t instanceof Ast.ObjType) {
       ClassInfo obj = classEnv.get(n.nm);
       if (obj == null) {
-        throw new TypeException("Param: type " + n.t + " doesn't exist");
+        throw new TypeException("(In Param): Can't find class " + n.t);
       }
     }
   }
@@ -246,7 +271,7 @@ public class Checker {
     if (n.t instanceof Ast.ObjType) {
       ClassInfo obj = classEnv.get(n.nm);
       if (obj == null) {
-        throw new TypeException("VarDecl: type " + n.t + " doesn't exist");
+        throw new TypeException("(In VarDecl) Can't find class " + n.t);
       }
     }
 
@@ -290,12 +315,21 @@ public class Checker {
   //  Make sure n.rhs is assignable to n.lhs.
   //
   static void check(Ast.Assign n) throws Exception {
-    // TODO: How do I check assignability of Exps?
-  /*
-    if (!assignable()) {
-      throw new  TypeException("Can't assign " + n.rhs + " to " + n.lhs);
+    System.out.println("Checking assignment");
+    // Figure out where lhs and rhs were declared
+    Ast.Type lhsDecl = typeEnv.get(n.lhs.toString());
+    Ast.Type rhsDecl = typeEnv.get(n.rhs.toString());
+    if (lhsDecl == null) {
+      throw new TypeException("(In Id) Can't find variable " + n.lhs);
     }
-  */
+
+    check(n.rhs);
+/*
+    if (!(asignable(lhsDecl, rhsDecl) {
+      throw new TypeException("(In Binop) Operant types don't match: " + lhsDecl 
+        + " " + ;
+    }
+*/
   }
 
   // CallStmt ---
@@ -309,7 +343,31 @@ public class Checker {
   //     the formal parameters.
   //
   static void check(Ast.CallStmt n) throws Exception {
-    // TODO
+    // 1: Check that n.obj is ObjType and the corresponding class exists
+
+    // 2: check that n.nm method exists
+    Ast.MethodDecl cur_method = thisCInfo.findMethodDecl(n.nm);
+    if (cur_method == null) {
+      throw new TypeException("(In CallStmt) Can't find method " + n.nm);
+    }
+
+    // 3: Check that the count and types of the args match those of formal params
+    int given_arg_count = n.args.length;
+    int required_arg_count = cur_method.params.length;
+    if (given_arg_count != required_arg_count) {
+      throw new TypeException("(In CallStmt) Wrong number of arguments: " +
+          given_arg_count + " for " + required_arg_count);
+    }
+
+/*
+    boolean correct_param_types = true;
+    for(int i = 0; i < required_arg_count; ++i) {
+      // Check that each given arg type is correct (in order)
+      if(n.args[i]) {
+
+      }
+    }
+*/
   }
 
   // If ---
@@ -387,25 +445,38 @@ public class Checker {
   //  Make sure n.e1's and n.e2's types are legal with respect to n.op.
   //
   static Ast.Type check(Ast.Binop n) throws Exception {
-    if (n.op.equals("&&") || n.op.equals("||")
-        || n.op.equals("==") || n.op.equals("!=")) {
+    System.out.println("checking binop");
 
-      // Could be either int or bool in this case
-      if (n.e1 instanceof Ast.IntLit && n.e2 instanceof Ast.IntLit
-          || n.e1 instanceof Ast.BoolLit && n.e2 instanceof Ast.BoolLit) {
-        // TODO: What do I return here?
-        return new Ast.IntType();
-      } else {
-        throw new TypeException("Illegal Binop statement");
-      }
+    // Need to get types of exps by looking at VarDecls
+    System.out.println(typeEnv);
+    System.out.println(n.e2);
+
+    Ast.Type e1_type;
+    Ast.Type e2_type;
+
+    if ((n.e1 instanceof Ast.IntLit)) {
+      e1_type = new Ast.IntType();
+    } else if ((n.e1 instanceof Ast.BoolLit)) {
+      e1_type = new Ast.BoolType();
     } else {
-      if (n.e1 instanceof Ast.IntLit && n.e2 instanceof Ast.IntLit) {
-        // TODO: What do I return here?
-        return new Ast.IntType();
-      } else {
-        throw new TypeException("Illegal Binop statement: must be integer");
-      }
-      // Must be integer
+      e1_type = typeEnv.get(n.e1.toString());
+    }
+
+    if ((n.e2 instanceof Ast.IntLit)) {
+      e2_type = new Ast.IntType();
+    } else if ((n.e2 instanceof Ast.BoolLit)) {
+      e2_type = new Ast.BoolType();
+    } else {
+      e2_type = typeEnv.get(n.e2.toString());
+    }
+
+    if ((e1_type instanceof Ast.IntType) && (e2_type instanceof Ast.IntType)) {
+      return new Ast.IntType();
+    } else if((e1_type instanceof Ast.BoolType) && (e2_type instanceof Ast.BoolType)){
+      return new Ast.BoolType();
+    } else {
+      throw new TypeException("(In Binop) Operand types don't match: " + e1_type
+      + " " + n.op + " " + e2_type);
     }
   }
 
