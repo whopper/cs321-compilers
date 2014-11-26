@@ -233,7 +233,7 @@ public class Checker {
     }
 
     for(Ast.VarDecl vd: n.vars) {
-      System.out.println("Var: " + vd.nm);
+      System.out.println("Var: " + vd.nm + ": " + vd);
       check(vd);
       typeEnv.put(vd.nm, vd.t);
     }
@@ -252,7 +252,7 @@ public class Checker {
   //
   static void check(Ast.Param n) throws Exception {
     if (n.t instanceof Ast.ObjType) {
-      ClassInfo obj = classEnv.get(n.nm);
+      ClassInfo obj = classEnv.get(((Ast.ObjType)n.t).nm);
       if (obj == null) {
         throw new TypeException("(In Param): Can't find class " + n.t);
       }
@@ -269,12 +269,34 @@ public class Checker {
   //
   static void check(Ast.VarDecl n) throws Exception {
     if (n.t instanceof Ast.ObjType) {
-      ClassInfo obj = classEnv.get(n.nm);
+      ClassInfo obj = classEnv.get(((Ast.ObjType)n.t).nm);
       if (obj == null) {
-        throw new TypeException("(In VarDecl) Can't find class " + n.t);
+        throw new TypeException("(In VarDecl) Can't find class " + n.nm);
       }
     }
 
+    if (n.init != null) {
+      System.out.println(n.init);
+      check(n.init);
+      Ast.Type init_type;
+
+      if ((n.init instanceof Ast.IntLit)) {
+        init_type = new Ast.IntType();
+      } else if ((n.init instanceof Ast.BoolLit)) {
+        init_type = new Ast.BoolType();
+      } else {
+        init_type = typeEnv.get(n.init.toString());
+      }
+
+      System.out.println(init_type);
+/*
+      if (!assignable(n.t, init_type)) {
+        throw new TypeException("Not assignable!");
+      }
+*/
+    }
+    
+    
   // TODO: How do I call assignable when init is an exp?
 /*
     if (n.init != null) {
@@ -317,19 +339,35 @@ public class Checker {
   static void check(Ast.Assign n) throws Exception {
     System.out.println("Checking assignment");
     // Figure out where lhs and rhs were declared
-    Ast.Type lhsDecl = typeEnv.get(n.lhs.toString());
-    Ast.Type rhsDecl = typeEnv.get(n.rhs.toString());
-    if (lhsDecl == null) {
+    Ast.Type lhs_type;
+    Ast.Type rhs_type;
+
+    if ((n.lhs instanceof Ast.IntLit)) {
+      lhs_type = new Ast.IntType();
+    } else if ((n.lhs instanceof Ast.BoolLit)) {
+      lhs_type = new Ast.BoolType();
+    } else {
+      lhs_type = typeEnv.get(n.lhs.toString());
+    }
+
+    if ((n.rhs instanceof Ast.IntLit)) {
+      rhs_type = new Ast.IntType();
+    } else if ((n.rhs instanceof Ast.BoolLit)) {
+      rhs_type = new Ast.BoolType();
+    } else {
+      rhs_type = typeEnv.get(n.rhs.toString());
+    }
+
+    if (lhs_type == null) {
       throw new TypeException("(In Id) Can't find variable " + n.lhs);
     }
 
     check(n.rhs);
-/*
-    if (!(asignable(lhsDecl, rhsDecl) {
-      throw new TypeException("(In Binop) Operant types don't match: " + lhsDecl 
-        + " " + ;
+
+    if (!(assignable(lhs_type, rhs_type))) {
+      throw new TypeException("(In Assign) lhs and rhs types don't match: " + lhs_type
+        + " <- " + rhs_type);
     }
-*/
   }
 
   // CallStmt ---
@@ -344,7 +382,22 @@ public class Checker {
   //
   static void check(Ast.CallStmt n) throws Exception {
     // 1: Check that n.obj is ObjType and the corresponding class exists
+    Ast.Type obj_type;
 
+    if ((n.obj instanceof Ast.IntLit)) {
+      obj_type = new Ast.IntType();
+    } else if ((n.obj instanceof Ast.BoolLit)) {
+      obj_type = new Ast.BoolType();
+    } else {
+      obj_type = typeEnv.get(n.obj.toString());
+    }
+
+    if (obj_type instanceof Ast.ObjType) {
+      ClassInfo obj = classEnv.get(((Ast.ObjType)obj_type).nm);
+      if (obj == null) {
+        throw new TypeException("Missing class!");
+      }
+    }
     // 2: check that n.nm method exists
     Ast.MethodDecl cur_method = thisCInfo.findMethodDecl(n.nm);
     if (cur_method == null) {
@@ -359,13 +412,23 @@ public class Checker {
           given_arg_count + " for " + required_arg_count);
     }
 
-/*
+/* TODO: Figure out how to do this!
     boolean correct_param_types = true;
     for(int i = 0; i < required_arg_count; ++i) {
       // Check that each given arg type is correct (in order)
-      if(n.args[i]) {
+      Ast.Type arg_type;
 
+      if ((n.args[i] instanceof Ast.IntLit)) {
+        arg_type = new Ast.IntType();
+      } else if ((n.obj instanceof Ast.BoolLit)) {
+        arg_type = new Ast.BoolType();
+      } else {
+        arg_type = typeEnv.get(n.args[i].toString());
       }
+
+///      if(n.args[i]) {
+
+//      }
     }
 */
   }
@@ -377,9 +440,18 @@ public class Checker {
   //  Make sure n.cond is boolean.
   //
   static void check(Ast.If n) throws Exception {
-    // TODO: uhhh, is this right?
-    if (!(n.cond instanceof Ast.BoolLit)) {
-      throw new TypeException("If: cond must be boolean");
+    Ast.Type cond_type;
+
+    if ((n.cond instanceof Ast.IntLit)) {
+      cond_type = new Ast.IntType();
+    } else if ((n.cond instanceof Ast.BoolLit)) {
+      cond_type = new Ast.BoolType();
+    } else {
+      cond_type = typeEnv.get(n.cond.toString());
+    }
+
+    if (!(cond_type instanceof Ast.BoolType)) {
+      throw new TypeException("(In If) Cond exp type is not boolean: " + cond_type);
     }
   }
 
@@ -401,10 +473,21 @@ public class Checker {
   //  Make sure n.arg is integer, boolean, or string.
   //
   static void check(Ast.Print n) throws Exception {
-    if (!((n.arg instanceof Ast.IntLit) && (n.arg instanceof Ast.BoolLit)
-        && (n.arg instanceof Ast.StrLit))) {
+    Ast.Type arg_type;
 
-      throw new TypeException("PrArg must be int, bool, or string");
+    if ((n.arg instanceof Ast.IntLit)) {
+      arg_type = new Ast.IntType();
+    } else if ((n.arg instanceof Ast.BoolLit)) {
+      arg_type = new Ast.BoolType();
+    } else {
+      arg_type = typeEnv.get(n.arg.toString());
+    }
+
+    if (!(arg_type instanceof Ast.IntType) && !(arg_type instanceof Ast.BoolType) 
+        && !(n.arg instanceof Ast.StrLit)) {
+
+      throw new TypeException("(In Print) Arg type is not int, boolean, or string: "
+        + arg_type);
     }
   }
 
@@ -414,9 +497,34 @@ public class Checker {
   //  If n.val exists, make sure it matches the expected return type.
   //
   static void check(Ast.Return n) throws Exception {
-    //if (n.val != null) {
-      // TODO: How do I figure out what method this return is in?
-    //}
+    Ast.Type method_type = thisMDecl.t;
+    if (n.val != null) {
+      // Find the method decl and grab its type
+      Ast.Type val_type;
+
+      if ((n.val instanceof Ast.IntLit)) {
+        val_type = new Ast.IntType();
+      } else if ((n.val instanceof Ast.BoolLit)) {
+        val_type = new Ast.BoolType();
+      } else {
+        val_type = typeEnv.get(n.val.toString());
+      }
+
+      String method_type_string = method_type.toString();
+      String val_type_string = val_type.toString();
+
+      if (method_type == null) {
+        throw new TypeException("(In Return) Unexpected return value");
+      } else if (!method_type_string.equals(val_type_string)) {
+        throw new TypeException("(In Return) Return type mismatch: " + method_type
+        + " <- " + val_type);
+      }
+    } else {
+      if (method_type != null) {
+        throw new TypeException("(In Return) Missing return value of type: "
+        + method_type);
+      }
+    }
   }
 
   // EXPRESSIONS
@@ -487,8 +595,21 @@ public class Checker {
   //  Make sure n.e's type is legal with respect to n.op.
   //
   static Ast.Type check(Ast.Unop n) throws Exception {
-    // TODO
-    return new Ast.IntType();
+    Ast.Type e_type;
+
+    if ((n.e instanceof Ast.IntLit)) {
+      e_type = new Ast.IntType();
+    } else if ((n.e instanceof Ast.BoolLit)) {
+      e_type = new Ast.BoolType();
+    } else {
+      e_type = typeEnv.get(n.e.toString());
+    }
+
+    if (!(e_type instanceof Ast.BoolType)) {
+      throw new TypeException("(In Unop) Bad operand type: " + n.op + " " + e_type);
+    }
+
+    return new Ast.BoolType();
   }
 
   // Call ---
@@ -532,16 +653,34 @@ public class Checker {
   //  Varify that n.ar is array and n.idx is integer.
   //
   static Ast.Type check(Ast.ArrayElm n) throws Exception {
-    // Might need to search for NewArray declaration
-    if (n.ar instanceof Ast.NewArray) {
-      if (n.idx instanceof Ast.IntLit) {
-        // TODO: What do I return here?
-        return new Ast.ArrayType(new Ast.IntType());
+    Ast.Type ar_type;
+    Ast.Type idx_type;
+
+    if ((n.ar instanceof Ast.IntLit)) {
+      ar_type = new Ast.IntType();
+    } else if ((n.ar instanceof Ast.BoolLit)) {
+      ar_type = new Ast.BoolType();
+    } else {
+      ar_type = typeEnv.get(n.ar.toString());
+    }
+
+    if ((n.idx instanceof Ast.IntLit)) {
+      idx_type = new Ast.IntType();
+    } else if ((n.idx instanceof Ast.BoolLit)) {
+      idx_type = new Ast.BoolType();
+    } else {
+      idx_type = typeEnv.get(n.ar.toString());
+    }
+
+    if ((ar_type instanceof Ast.ArrayType)) {
+      if (idx_type instanceof Ast.IntType) {
+        System.out.println("TYPE: " + idx_type);
+        return new Ast.ArrayType(idx_type);
       } else {
-        throw new TypeException("Array doesn't hold integers");
+        throw new TypeException("(In ArrayElm) Index is not integer: " + idx_type);
       }
     } else {
-      throw new TypeException("n.ar is not an array");
+      throw new TypeException("(In ArrayElm) Object is not an array: " + ar_type);
     }
   }
 
@@ -568,17 +707,27 @@ public class Checker {
   //  2. Verify that n.nm is a valid field in the object.
   //
   static Ast.Type check(Ast.Field n) throws Exception {
-    ClassInfo objClass = classEnv.get(n.nm);
-    if(objClass != null) {
-      Ast.VarDecl cur_decl = objClass.findFieldDecl(n.nm);
-      if(cur_decl != null) {
-        return new Ast.ObjType(n.nm);
-      } else {
-        throw new TypeException("n.nm is not a valid field in this object");
+    // Get the type of obj
+    Ast.Type obj_type;
+
+    if ((n.obj instanceof Ast.IntLit)) {
+      obj_type = new Ast.IntType();
+    } else if ((n.obj instanceof Ast.BoolLit)) {
+      obj_type = new Ast.BoolType();
+    } else {
+      obj_type = typeEnv.get(n.obj.toString());
+    }
+
+    if (obj_type instanceof Ast.ObjType) {
+      ClassInfo obj_class_decl = classEnv.get(n.obj.toString());
+      if (obj_class_decl == null) {
+        throw new TypeException("(In Field) No corresponding class");
       }
     } else {
-      throw new TypeException("n.obj does not have a corresponding class");
+      throw new TypeException("(In Field) Object is not of ObjType: " + obj_type);
     }
+
+    return new Ast.IntType();
   }
 
   // Id ---
