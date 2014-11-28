@@ -271,6 +271,9 @@ public class Checker {
         throw new TypeException("(In Param): Can't find class " + ((Ast.ObjType)n.t).nm);
       }
     }
+
+    // Make sure arg type is correct
+    System.out.println(n);
   }
 
   // VarDecl ---
@@ -368,6 +371,9 @@ public class Checker {
       rhs_type = new Ast.IntType();
     } else if ((n.rhs instanceof Ast.BoolLit) || (n.rhs instanceof Ast.Binop)) {
       rhs_type = new Ast.BoolType();
+    } else if ((n.rhs instanceof Ast.Call)) {
+      Ast.MethodDecl call_method = thisCInfo.findMethodDecl(((Ast.Call)n.rhs).nm);
+      rhs_type = call_method.t;
     } else {
       rhs_type = typeEnv.get(n.rhs.toString());
     }
@@ -376,6 +382,7 @@ public class Checker {
       throw new TypeException("(In Id) Can't find variable " + n.lhs);
     }
 
+    System.out.println(n.rhs);
     check(n.rhs);
 
     if (!(assignable(lhs_type, rhs_type))) {
@@ -396,6 +403,7 @@ public class Checker {
   //
   static void check(Ast.CallStmt n) throws Exception {
     // 1: Check that n.obj is ObjType and the corresponding class exists
+    System.out.println("IN CALL");
     Ast.Type obj_type;
 
     if ((n.obj instanceof Ast.IntLit)) {
@@ -426,25 +434,24 @@ public class Checker {
           given_arg_count + " for " + required_arg_count);
     }
 
-/* TODO: Figure out how to do this!
-    boolean correct_param_types = true;
-    for(int i = 0; i < required_arg_count; ++i) {
-      // Check that each given arg type is correct (in order)
-      Ast.Type arg_type;
-
-      if ((n.args[i] instanceof Ast.IntLit)) {
-        arg_type = new Ast.IntType();
-      } else if ((n.obj instanceof Ast.BoolLit)) {
-        arg_type = new Ast.BoolType();
+    // Now make sure the types are correct
+    for (int i=0; i < required_arg_count; ++i) {
+      Ast.Type required_type = cur_method.params[i].t;
+      Ast.Type got_type;
+      if (n.args[i] instanceof Ast.IntLit) {
+        got_type = new Ast.IntType();
+      } else if (n.args[i] instanceof Ast.BoolLit) {
+        got_type = new Ast.BoolType();
       } else {
-        arg_type = typeEnv.get(n.args[i].toString());
+        got_type = typeEnv.get(n.args[i].toString());
       }
 
-///      if(n.args[i]) {
-
-//      }
+      if (!((required_type instanceof Ast.IntType) && (got_type instanceof Ast.IntType))
+      && !((required_type instanceof Ast.BoolType) && (got_type instanceof Ast.BoolType)) ){
+        throw new TypeException("(In CallStmt) Param and arg types don't match: " +
+          required_type + " vs. " + got_type);
+      }
     }
-*/
   }
 
   // If ---
@@ -648,8 +655,41 @@ public class Checker {
   //  In addition, this routine needs to return the method's return type.
   //
   static Ast.Type check(Ast.Call n) throws Exception {
-    // TODO: How do I get method's return type?
-    return new Ast.IntType();
+    Ast.Type cur_method_type = thisMDecl.t;
+    Ast.MethodDecl cur_method_decl = thisCInfo.findMethodDecl(n.nm);
+
+    // First make sure arg count is the same
+    int given_arg_count = n.args.length;
+    int required_arg_count = cur_method_decl.params.length;
+
+    System.out.println(given_arg_count);
+    System.out.println(required_arg_count);
+
+    if (given_arg_count != required_arg_count) {
+      throw new TypeException("(In Call) Param and arg counts don't match: " +
+          required_arg_count + " vs. " + given_arg_count);
+    }
+
+    // Now make sure the types are correct
+    for (int i=0; i < required_arg_count; ++i) {
+      Ast.Type required_type = cur_method_decl.params[i].t;
+      Ast.Type got_type;
+      if (n.args[i] instanceof Ast.IntLit) {
+        got_type = new Ast.IntType();
+      } else if (n.args[i] instanceof Ast.BoolLit) {
+        got_type = new Ast.BoolType();
+      } else {
+        got_type = typeEnv.get(n.args[i].toString());
+      }
+
+      if (!((required_type instanceof Ast.IntType) && (got_type instanceof Ast.IntType))
+      && !((required_type instanceof Ast.BoolType) && (got_type instanceof Ast.BoolType)) ){
+        throw new TypeException("(In Call) Param and arg types don't match: " +
+          required_type + " vs. " + got_type);
+      }
+    }
+
+    return cur_method_type;
   }
 
   // NewArray ---
