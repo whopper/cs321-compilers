@@ -224,7 +224,13 @@ public class Checker {
   //  3. For each VarDecl, add a new name-type binding to typeEnv.
   //
   static void check(Ast.MethodDecl n) throws Exception {
-    System.out.println("Checking method: " + n.nm);
+    //System.out.println("Checking method: " + n.nm);
+    boolean has_return = false;
+    boolean requires_return = false;
+    if (n.t != null) {
+      requires_return = true;
+    }
+
     thisMDecl = n;
     typeEnv.clear();
 
@@ -233,14 +239,22 @@ public class Checker {
     }
 
     for(Ast.VarDecl vd: n.vars) {
-      System.out.println("Var: " + vd.nm + ": " + vd);
+      //System.out.println("Var: " + vd.nm + ": " + vd);
       check(vd);
       typeEnv.put(vd.nm, vd.t);
     }
 
     for(Ast.Stmt s: n.stmts) {
-      System.out.println("calling checkStmt: " + s);
+      //System.out.println("calling checkStmt: " + s);
+      // We need to make sure we get a return stmt if we need one
+      if (s instanceof Ast.Return) {
+        has_return = true;
+      }
       check(s);
+    }
+
+    if (requires_return == true && has_return == false) {
+      throw new TypeException("(In MethodDecl) Missing return statement");
     }
   }
 
@@ -254,7 +268,7 @@ public class Checker {
     if (n.t instanceof Ast.ObjType) {
       ClassInfo obj = classEnv.get(((Ast.ObjType)n.t).nm);
       if (obj == null) {
-        throw new TypeException("(In Param): Can't find class " + n.t);
+        throw new TypeException("(In Param): Can't find class " + ((Ast.ObjType)n.t).nm);
       }
     }
   }
@@ -271,12 +285,12 @@ public class Checker {
     if (n.t instanceof Ast.ObjType) {
       ClassInfo obj = classEnv.get(((Ast.ObjType)n.t).nm);
       if (obj == null) {
-        throw new TypeException("(In VarDecl) Can't find class " + n.nm);
+        throw new TypeException("(In VarDecl) Can't find class " + ((Ast.ObjType)n.t).nm);
       }
     }
 
     if (n.init != null) {
-      System.out.println(n.init);
+      //System.out.println(n.init);
       check(n.init);
       Ast.Type init_type;
 
@@ -288,7 +302,7 @@ public class Checker {
         init_type = typeEnv.get(n.init.toString());
       }
 
-      System.out.println(init_type);
+      //System.out.println(init_type);
 /*
       if (!assignable(n.t, init_type)) {
         throw new TypeException("Not assignable!");
@@ -337,14 +351,14 @@ public class Checker {
   //  Make sure n.rhs is assignable to n.lhs.
   //
   static void check(Ast.Assign n) throws Exception {
-    System.out.println("Checking assignment");
+    //System.out.println("Checking assignment");
     // Figure out where lhs and rhs were declared
     Ast.Type lhs_type;
     Ast.Type rhs_type;
 
     if ((n.lhs instanceof Ast.IntLit)) {
       lhs_type = new Ast.IntType();
-    } else if ((n.lhs instanceof Ast.BoolLit)) {
+    } else if ((n.lhs instanceof Ast.BoolLit) || (n.lhs instanceof Ast.Binop)) {
       lhs_type = new Ast.BoolType();
     } else {
       lhs_type = typeEnv.get(n.lhs.toString());
@@ -352,7 +366,7 @@ public class Checker {
 
     if ((n.rhs instanceof Ast.IntLit)) {
       rhs_type = new Ast.IntType();
-    } else if ((n.rhs instanceof Ast.BoolLit)) {
+    } else if ((n.rhs instanceof Ast.BoolLit) || (n.rhs instanceof Ast.Binop)) {
       rhs_type = new Ast.BoolType();
     } else {
       rhs_type = typeEnv.get(n.rhs.toString());
@@ -462,7 +476,9 @@ public class Checker {
   //  Make sure n.cond is boolean.
   //
   static void check(Ast.While n) throws Exception {
-    if (!(n.cond instanceof Ast.BoolLit)) {
+    System.out.println(n);
+    // check((Ast.Binop) n.cond);
+    if (!(n.cond instanceof Ast.BoolLit) && !(n.cond instanceof Ast.Binop) ) {
       throw new TypeException("While: cond must be boolean");
     }
   }
@@ -483,7 +499,7 @@ public class Checker {
       arg_type = typeEnv.get(n.arg.toString());
     }
 
-    if (!(arg_type instanceof Ast.IntType) && !(arg_type instanceof Ast.BoolType) 
+    if (!(arg_type instanceof Ast.IntType) && !(arg_type instanceof Ast.BoolType)
         && !(n.arg instanceof Ast.StrLit)) {
 
       throw new TypeException("(In Print) Arg type is not int, boolean, or string: "
@@ -510,18 +526,24 @@ public class Checker {
         val_type = typeEnv.get(n.val.toString());
       }
 
-      String method_type_string = method_type.toString();
-      String val_type_string = val_type.toString();
+      if (method_type != null) {
+        String method_type_string = method_type.toString();
+        String val_type_string = val_type.toString();
 
-      if (method_type == null) {
-        throw new TypeException("(In Return) Unexpected return value");
-      } else if (!method_type_string.equals(val_type_string)) {
-        throw new TypeException("(In Return) Return type mismatch: " + method_type
-        + " <- " + val_type);
+        if (method_type == null) {
+          throw new TypeException("(In Return) Unexpected return value");
+        } else if (!method_type_string.equals(val_type_string)) {
+          throw new TypeException("(In Return) Return type mismatch: " + method_type
+          + " <- " + val_type);
+        }
+      } else {
+        if (val_type != null) {
+          throw new TypeException("(In Return) Unexpected return value");
+        }
       }
     } else {
       if (method_type != null) {
-        throw new TypeException("(In Return) Missing return value of type: "
+        throw new TypeException("(In Return) Missing return value of type "
         + method_type);
       }
     }
@@ -553,11 +575,11 @@ public class Checker {
   //  Make sure n.e1's and n.e2's types are legal with respect to n.op.
   //
   static Ast.Type check(Ast.Binop n) throws Exception {
-    System.out.println("checking binop");
+    //System.out.println("checking binop");
 
     // Need to get types of exps by looking at VarDecls
-    System.out.println(typeEnv);
-    System.out.println(n.e2);
+    //System.out.println(typeEnv);
+    //System.out.println(n.e2);
 
     Ast.Type e1_type;
     Ast.Type e2_type;
@@ -577,6 +599,11 @@ public class Checker {
     } else {
       e2_type = typeEnv.get(n.e2.toString());
     }
+
+    //System.out.println(n.e1);
+    //System.out.println(n.e2);
+    //System.out.println(e1_type);
+    //System.out.println(e2_type);
 
     if ((e1_type instanceof Ast.IntType) && (e2_type instanceof Ast.IntType)) {
       return new Ast.IntType();
@@ -674,7 +701,7 @@ public class Checker {
 
     if ((ar_type instanceof Ast.ArrayType)) {
       if (idx_type instanceof Ast.IntType) {
-        System.out.println("TYPE: " + idx_type);
+        //System.out.println("TYPE: " + idx_type);
         return new Ast.ArrayType(idx_type);
       } else {
         throw new TypeException("(In ArrayElm) Index is not integer: " + idx_type);
@@ -690,12 +717,12 @@ public class Checker {
   //  Verify that the corresponding class exists.
   //
   static Ast.Type check(Ast.NewObj n) throws Exception {
-    System.out.println("IN NewObj");
+    //System.out.println("IN NewObj");
     ClassInfo thisClass = classEnv.get(n.nm);
     if (thisClass != null) {
       return new Ast.ObjType(n.nm);
     } else {
-      throw new TypeException("Class does not exist!");
+      throw new TypeException("(In NewObj) Can't find class " + n.nm);
     }
   }
 
@@ -719,14 +746,20 @@ public class Checker {
     }
 
     if (obj_type instanceof Ast.ObjType) {
-      ClassInfo obj_class_decl = classEnv.get(n.obj.toString());
+      ClassInfo obj_class_decl = classEnv.get(((Ast.ObjType)obj_type).nm);
       if (obj_class_decl == null) {
-        throw new TypeException("(In Field) No corresponding class");
+        throw new TypeException("(In Field) Can't find field " + ((Ast.ObjType)obj_type).nm);
+      }
+
+      // Verify that n.nm is a valid field in the object
+      // Make sure a vardecl exists for this field
+      Ast.VarDecl valid_field = obj_class_decl.findFieldDecl(n.nm.toString());
+      if (valid_field == null) {
+        throw new TypeException("(In Field) Can't find field " + n.nm);
       }
     } else {
       throw new TypeException("(In Field) Object is not of ObjType: " + obj_type);
     }
-
     return new Ast.IntType();
   }
 

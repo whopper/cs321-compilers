@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In Param): Can't find class (ObjType c)
+---
+> Checker$TypeException: (In Param) Can't find class c

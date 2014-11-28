@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In Assign) lhs and rhs types don't match: IntType <- null
+---
+> Checker$TypeException: (In Call) Param and arg counts don't match: 0 vs. 1

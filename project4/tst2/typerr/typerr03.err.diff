@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: Class does not exist!
+---
+> Checker$TypeException: (In NewObj) Can't find class c

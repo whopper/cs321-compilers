@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: While: cond must be boolean
+---
+> Checker$TypeException: (In MethodDecl) Missing return statement

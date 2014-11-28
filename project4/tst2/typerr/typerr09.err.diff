@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In ArrayElm) Object is not an array: IntType
+---
+> Checker$TypeException: (In ArrayElm) Object is not array: IntType

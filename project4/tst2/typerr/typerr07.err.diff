@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In Assign) lhs and rhs types don't match: BoolType <- null
+---
+> Checker$TypeException: (In Binop) Operand types don't match: BoolType == IntType

@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In Print) Arg type is not int, boolean, or string: null
+---
+> Checker$TypeException: (In Id) Can't find variable a

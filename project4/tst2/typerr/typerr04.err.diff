@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In VarDecl) Can't find class x
+---
+> Checker$TypeException: (In VarDecl) Can't find class c

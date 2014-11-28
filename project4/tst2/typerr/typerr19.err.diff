@@ -1,0 +1,4 @@
+1c1
+< Checker$TypeException: (In Field) No corresponding class
+---
+> Checker$TypeException: (In Field) Can't find field j
