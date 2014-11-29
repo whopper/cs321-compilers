@@ -75,12 +75,13 @@ public class Checker {
   // thisMDecl - points to the current method's MethodDecl
   //
   // For other analyses:
-  // (Define as you need.)
+  // condHasReturn - if set to false indicates a missing return statement
   //
   private static HashMap<String, ClassInfo> classEnv = new HashMap<String, ClassInfo>();
   private static HashMap<String, Ast.Type> typeEnv = new HashMap<String, Ast.Type>();
   private static ClassInfo thisCInfo = null;
   private static Ast.MethodDecl thisMDecl = null;
+  private static boolean condHasReturn = true;
 
   //------------------------------------------------------------------------------
   // Type Compatibility Routines
@@ -171,9 +172,7 @@ public class Checker {
       classEnv.put(c.nm, new ClassInfo(c, pcinfo));
     }
     for (Ast.ClassDecl c: classes) {
-      System.out.println("calling classcheck");
       check(c);
-      System.out.println("done classcheck");
     }
 
   }
@@ -218,10 +217,8 @@ public class Checker {
 
     // Check each method
     for (Ast.MethodDecl md: n.mthds) {
-      System.out.println("Into: " + md);
       check(md);
     }
-    System.out.println("Done checking " + n);
   }
 
   // MethodDecl ---
@@ -250,15 +247,12 @@ public class Checker {
     }
 
     for(Ast.VarDecl vd: n.vars) {
-      //System.out.println("Var: " + vd.nm + ": " + vd);
       check(vd);
       typeEnv.put(vd.nm, vd.t);
     }
 
-    System.out.println("Check stmts");
 
     for(Ast.Stmt s: n.stmts) {
-      System.out.println("calling checkStmt: " + s);
       // We need to make sure we get a return stmt if we need one
       if (s instanceof Ast.Return) {
         has_return = true;
@@ -266,7 +260,6 @@ public class Checker {
       check(s);
     }
 
-    System.out.println("Done stmts");
     if (requires_return == true && has_return == false) {
       throw new TypeException("(In MethodDecl) Missing return statement");
     }
@@ -287,7 +280,6 @@ public class Checker {
     }
 
     // Make sure arg type is correct
-    //System.out.println(n);
   }
 
   // VarDecl ---
@@ -307,7 +299,6 @@ public class Checker {
     }
 
     if (n.init != null) {
-      //System.out.println(n.init);
       check(n.init);
       Ast.Type init_type;
 
@@ -319,23 +310,12 @@ public class Checker {
         init_type = typeEnv.get(n.init.toString());
       }
 
-      //System.out.println(init_type);
 /*
       if (!assignable(n.t, init_type)) {
         throw new TypeException("Not assignable!");
       }
 */
     }
-    
-    
-  // TODO: How do I call assignable when init is an exp?
-/*
-    if (n.init != null) {
-      if (!assignable(n.t, n.init)) {
-        throw new TypeException("VarDecl: init expr: " + n.init + "not assignable");
-      }
-    }
-*/
   }
 
   // STATEMENTS
@@ -402,7 +382,6 @@ public class Checker {
       check((Ast.Id)n.lhs);
     }
 
-    System.out.println(n.rhs);
     check(n.rhs);
 
     if (!(assignable(lhs_type, rhs_type))) {
@@ -536,7 +515,7 @@ public class Checker {
       }
 
       if (!(arg_type instanceof Ast.IntType) && !(arg_type instanceof Ast.BoolType)
-          && !(n.arg instanceof Ast.StrLit) && !(arg_type instanceof Ast.ArrayType)) {
+          && !(n.arg instanceof Ast.StrLit)) {
 
         throw new TypeException("(In Print) Arg type is not int, boolean, or string: "
           + arg_type);
