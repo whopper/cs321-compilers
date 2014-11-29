@@ -107,6 +107,12 @@ public class Checker {
       return true;
     } else if((tdst instanceof Ast.ArrayType) && (tsrc instanceof Ast.ArrayType)) {
       return(assignable(((Ast.ArrayType)tdst).et, ((Ast.ArrayType)tsrc).et));
+    } else if((tdst instanceof Ast.ArrayType) && (tsrc instanceof Ast.IntType)) {
+      if (((Ast.ArrayType)tdst).et instanceof Ast.IntType) {
+        return true;
+      } else {
+        return false;
+      }
     } else if((tdst instanceof Ast.ObjType) && (tsrc instanceof Ast.ObjType)) {
       // TODO: How to get ancestor class names??
       if(((Ast.ObjType)tdst).nm == ((Ast.ObjType)tsrc).nm /*|| tsrc ancestor name*/) {
@@ -164,8 +170,12 @@ public class Checker {
       ClassInfo pcinfo = (c.pnm == null) ? null : classEnv.get(c.pnm);
       classEnv.put(c.nm, new ClassInfo(c, pcinfo));
     }
-    for (Ast.ClassDecl c: classes)
+    for (Ast.ClassDecl c: classes) {
+      System.out.println("calling classcheck");
       check(c);
+      System.out.println("done classcheck");
+    }
+
   }
 
   // Utility routine
@@ -208,8 +218,10 @@ public class Checker {
 
     // Check each method
     for (Ast.MethodDecl md: n.mthds) {
+      System.out.println("Into: " + md);
       check(md);
     }
+    System.out.println("Done checking " + n);
   }
 
   // MethodDecl ---
@@ -224,7 +236,6 @@ public class Checker {
   //  3. For each VarDecl, add a new name-type binding to typeEnv.
   //
   static void check(Ast.MethodDecl n) throws Exception {
-    //System.out.println("Checking method: " + n.nm);
     boolean has_return = false;
     boolean requires_return = false;
     if (n.t != null) {
@@ -244,8 +255,10 @@ public class Checker {
       typeEnv.put(vd.nm, vd.t);
     }
 
+    System.out.println("Check stmts");
+
     for(Ast.Stmt s: n.stmts) {
-      //System.out.println("calling checkStmt: " + s);
+      System.out.println("calling checkStmt: " + s);
       // We need to make sure we get a return stmt if we need one
       if (s instanceof Ast.Return) {
         has_return = true;
@@ -253,6 +266,7 @@ public class Checker {
       check(s);
     }
 
+    System.out.println("Done stmts");
     if (requires_return == true && has_return == false) {
       throw new TypeException("(In MethodDecl) Missing return statement");
     }
@@ -268,12 +282,12 @@ public class Checker {
     if (n.t instanceof Ast.ObjType) {
       ClassInfo obj = classEnv.get(((Ast.ObjType)n.t).nm);
       if (obj == null) {
-        throw new TypeException("(In Param): Can't find class " + ((Ast.ObjType)n.t).nm);
+        throw new TypeException("(In Param) Can't find class " + ((Ast.ObjType)n.t).nm);
       }
     }
 
     // Make sure arg type is correct
-    System.out.println(n);
+    //System.out.println(n);
   }
 
   // VarDecl ---
@@ -363,6 +377,9 @@ public class Checker {
       lhs_type = new Ast.IntType();
     } else if ((n.lhs instanceof Ast.BoolLit) || (n.lhs instanceof Ast.Binop)) {
       lhs_type = new Ast.BoolType();
+    } else if (n.lhs instanceof Ast.ArrayElm) {
+      // TODO: fix this
+      lhs_type = new Ast.IntType();
     } else {
       lhs_type = typeEnv.get(n.lhs.toString());
     }
@@ -374,12 +391,15 @@ public class Checker {
     } else if ((n.rhs instanceof Ast.Call)) {
       Ast.MethodDecl call_method = thisCInfo.findMethodDecl(((Ast.Call)n.rhs).nm);
       rhs_type = call_method.t;
+    } else if (n.rhs instanceof Ast.NewArray) {
+      rhs_type = (((Ast.NewArray)n.rhs).et);
     } else {
       rhs_type = typeEnv.get(n.rhs.toString());
     }
 
+
     if (lhs_type == null) {
-      throw new TypeException("(In Id) Can't find variable " + n.lhs);
+      check((Ast.Id)n.lhs);
     }
 
     System.out.println(n.rhs);
@@ -403,7 +423,7 @@ public class Checker {
   //
   static void check(Ast.CallStmt n) throws Exception {
     // 1: Check that n.obj is ObjType and the corresponding class exists
-    System.out.println("IN CALL");
+    //System.out.println("IN CALL");
     Ast.Type obj_type;
 
     if ((n.obj instanceof Ast.IntLit)) {
@@ -465,7 +485,7 @@ public class Checker {
 
     if ((n.cond instanceof Ast.IntLit)) {
       cond_type = new Ast.IntType();
-    } else if ((n.cond instanceof Ast.BoolLit)) {
+    } else if ((n.cond instanceof Ast.BoolLit) || (n.cond instanceof Ast.Binop)) {
       cond_type = new Ast.BoolType();
     } else {
       cond_type = typeEnv.get(n.cond.toString());
@@ -483,7 +503,7 @@ public class Checker {
   //  Make sure n.cond is boolean.
   //
   static void check(Ast.While n) throws Exception {
-    System.out.println(n);
+    //System.out.println(n);
     // check((Ast.Binop) n.cond);
     if (!(n.cond instanceof Ast.BoolLit) && !(n.cond instanceof Ast.Binop) ) {
       throw new TypeException("While: cond must be boolean");
@@ -497,20 +517,30 @@ public class Checker {
   //
   static void check(Ast.Print n) throws Exception {
     Ast.Type arg_type;
+    if (n.arg != null) {
+      if ((n.arg instanceof Ast.IntLit)) {
+        arg_type = new Ast.IntType();
+      } else if ((n.arg instanceof Ast.BoolLit) || (n.arg instanceof Ast.Binop)) {
+        arg_type = new Ast.BoolType();
+      } else if (n.arg instanceof Ast.ArrayElm) {
+        arg_type = new Ast.ArrayType(new Ast.IntType());
+      } else if (n.arg instanceof Ast.Call) {
+        // A horrible hack
+        arg_type = new Ast.IntType();
+      } else {
+        arg_type = typeEnv.get(n.arg.toString());
+      }
 
-    if ((n.arg instanceof Ast.IntLit)) {
-      arg_type = new Ast.IntType();
-    } else if ((n.arg instanceof Ast.BoolLit)) {
-      arg_type = new Ast.BoolType();
-    } else {
-      arg_type = typeEnv.get(n.arg.toString());
-    }
+      if (n.arg instanceof Ast.Binop) {
+        check((Ast.Binop)n.arg);
+      }
 
-    if (!(arg_type instanceof Ast.IntType) && !(arg_type instanceof Ast.BoolType)
-        && !(n.arg instanceof Ast.StrLit)) {
+      if (!(arg_type instanceof Ast.IntType) && !(arg_type instanceof Ast.BoolType)
+          && !(n.arg instanceof Ast.StrLit) && !(arg_type instanceof Ast.ArrayType)) {
 
-      throw new TypeException("(In Print) Arg type is not int, boolean, or string: "
-        + arg_type);
+        throw new TypeException("(In Print) Arg type is not int, boolean, or string: "
+          + arg_type);
+      }
     }
   }
 
@@ -529,6 +559,9 @@ public class Checker {
         val_type = new Ast.IntType();
       } else if ((n.val instanceof Ast.BoolLit)) {
         val_type = new Ast.BoolType();
+      } else if (n.val instanceof Ast.Binop) {
+        // Horrible hack... TODO
+        val_type = new Ast.IntType();
       } else {
         val_type = typeEnv.get(n.val.toString());
       }
@@ -536,7 +569,6 @@ public class Checker {
       if (method_type != null) {
         String method_type_string = method_type.toString();
         String val_type_string = val_type.toString();
-
         if (method_type == null) {
           throw new TypeException("(In Return) Unexpected return value");
         } else if (!method_type_string.equals(val_type_string)) {
@@ -607,15 +639,20 @@ public class Checker {
       e2_type = typeEnv.get(n.e2.toString());
     }
 
-    //System.out.println(n.e1);
-    //System.out.println(n.e2);
-    //System.out.println(e1_type);
-    //System.out.println(e2_type);
+    if (e1_type == null) {
+      check((Ast.Id)n.e1);
+    } else if(e2_type == null) {
+      check((Ast.Id)n.e2);
+    }
 
     if ((e1_type instanceof Ast.IntType) && (e2_type instanceof Ast.IntType)) {
       return new Ast.IntType();
     } else if((e1_type instanceof Ast.BoolType) && (e2_type instanceof Ast.BoolType)){
       return new Ast.BoolType();
+    } else if((e1_type instanceof Ast.ObjType) && (e2_type instanceof Ast.ObjType)) {
+      return new Ast.IntType();
+    } else if((e1_type instanceof Ast.ArrayType) && (e2_type instanceof Ast.ArrayType)) {
+      return new Ast.IntType();
     } else {
       throw new TypeException("(In Binop) Operand types don't match: " + e1_type
       + " " + n.op + " " + e2_type);
@@ -662,8 +699,8 @@ public class Checker {
     int given_arg_count = n.args.length;
     int required_arg_count = cur_method_decl.params.length;
 
-    System.out.println(given_arg_count);
-    System.out.println(required_arg_count);
+    //System.out.println(given_arg_count);
+    //System.out.println(required_arg_count);
 
     if (given_arg_count != required_arg_count) {
       throw new TypeException("(In Call) Param and arg counts don't match: " +
@@ -747,7 +784,7 @@ public class Checker {
         throw new TypeException("(In ArrayElm) Index is not integer: " + idx_type);
       }
     } else {
-      throw new TypeException("(In ArrayElm) Object is not an array: " + ar_type);
+      throw new TypeException("(In ArrayElm) Object is not array: " + ar_type);
     }
   }
 
@@ -822,7 +859,7 @@ public class Checker {
         Ast.Type field_type = cur_decl.t;
         return field_type;
       } else {
-        throw new TypeException("Variable not declared");
+        throw new TypeException("(In Id) Can't find variable " + n.nm);
       }
     }
   }
