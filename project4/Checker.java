@@ -109,17 +109,9 @@ public class Checker {
 
     } else if((tdst instanceof Ast.ArrayType) && (tsrc instanceof Ast.ArrayType)) {
       return(assignable(((Ast.ArrayType)tdst).et, ((Ast.ArrayType)tsrc).et));
-
-/*    } else if((tdst instanceof Ast.ArrayType) && (tsrc instanceof Ast.IntType)) {
-      if (((Ast.ArrayType)tdst).et instanceof Ast.IntType) {
-        return true;
-      } else {
-        return false;
-      }
-*/
     } else if((tdst instanceof Ast.ObjType) && (tsrc instanceof Ast.ObjType)) {
       ClassInfo srcClass = classEnv.get(((Ast.ObjType)tsrc).nm);
-      if(((Ast.ObjType)tdst).nm.equals(((Ast.ObjType)tsrc).nm) /*|| tsrc ancestor name*/) {
+      if(((Ast.ObjType)tdst).nm.equals(((Ast.ObjType)tsrc).nm)) {
         return true;
       } else if (srcClass != null) {
         while (srcClass != null && srcClass.parent != null) {
@@ -130,7 +122,6 @@ public class Checker {
         }
       }
     }
-
     return false;
   }
 
@@ -252,6 +243,7 @@ public class Checker {
 
     for(Ast.Param p: n.params) {
       check(p);
+      typeEnv.put(p.nm, p.t);
     }
 
     for(Ast.VarDecl vd: n.vars) {
@@ -345,6 +337,7 @@ public class Checker {
   //  Make sure n.rhs is assignable to n.lhs.
   //
   static void check(Ast.Assign n) throws Exception {
+    // System.out.println("ASSIGN");
     // Figure out where lhs and rhs were declared
     Ast.Type lhs_type = check(n.lhs);
     Ast.Type rhs_type = check(n.rhs);
@@ -366,51 +359,42 @@ public class Checker {
   //     the formal parameters.
   //
   static void check(Ast.CallStmt n) throws Exception {
-    // 1: Check that n.obj is ObjType and the corresponding class exists
-    Ast.Type obj_type;
+    Ast.Type obj_type = check(n.obj); // Returns Ast.ObjType
+    ClassInfo class_obj = classEnv.get(((Ast.ObjType)obj_type).nm);
+    Ast.Type cur_method_type = thisMDecl.t;
 
-    if ((n.obj instanceof Ast.IntLit)) {
-      obj_type = new Ast.IntType();
-    } else if ((n.obj instanceof Ast.BoolLit)) {
-      obj_type = new Ast.BoolType();
-    } else {
-      obj_type = typeEnv.get(n.obj.toString());
+    // 1. Make sure n.obj is ObjType
+    if (!(obj_type instanceof Ast.ObjType)) {
+      throw new TypeException("(In CallStmt) Not ObjType");
     }
 
-    if (obj_type instanceof Ast.ObjType) {
-      ClassInfo obj = classEnv.get(((Ast.ObjType)obj_type).nm);
-      if (obj == null) {
-        throw new TypeException("(In CallStmt) Missing class");
-      }
+    // 2. Make sure the object exists
+    if (class_obj == null) {
+      throw new TypeException("(In CallStmt) Class doesn't exist");
     }
-    // 2: check that n.nm method exists
-    Ast.MethodDecl cur_method = thisCInfo.findMethodDecl(n.nm);
-    if (cur_method == null) {
+
+    // 2.5. Make sure n.nm exists by checking methodDecls
+    Ast.MethodDecl mthd_info = class_obj.findMethodDecl(n.nm);
+    if (mthd_info == null) {
       throw new TypeException("(In CallStmt) Can't find method " + n.nm);
     }
 
-    // 3: Check that the count and types of the args match those of formal params
+    // First make sure arg count is the same
+    Ast.MethodDecl cur_method_decl = class_obj.findMethodDecl(n.nm);
     int given_arg_count = n.args.length;
-    int required_arg_count = cur_method.params.length;
+    int required_arg_count = cur_method_decl.params.length;
+
     if (given_arg_count != required_arg_count) {
-      throw new TypeException("(In CallStmt) Wrong number of arguments: " +
-          given_arg_count + " for " + required_arg_count);
+      throw new TypeException("(In CallStmt) Param and arg counts don't match: " +
+          required_arg_count + " vs. " + given_arg_count);
     }
 
     // Now make sure the types are correct
     for (int i=0; i < required_arg_count; ++i) {
-      Ast.Type required_type = cur_method.params[i].t;
-      Ast.Type got_type;
-      if (n.args[i] instanceof Ast.IntLit) {
-        got_type = new Ast.IntType();
-      } else if (n.args[i] instanceof Ast.BoolLit) {
-        got_type = new Ast.BoolType();
-      } else {
-        got_type = typeEnv.get(n.args[i].toString());
-      }
+      Ast.Type required_type = cur_method_decl.params[i].t;
+      Ast.Type got_type = check(n.args[i]);
 
-      if (!((required_type instanceof Ast.IntType) && (got_type instanceof Ast.IntType))
-      && !((required_type instanceof Ast.BoolType) && (got_type instanceof Ast.BoolType)) ){
+      if (!(assignable(got_type, cur_method_decl.params[i].t))) {
         throw new TypeException("(In CallStmt) Param and arg types don't match: " +
           required_type + " vs. " + got_type);
       }
@@ -552,6 +536,8 @@ public class Checker {
       return new Ast.BoolType();
     } else if (n.op == Ast.BOP.SUB | n.op == Ast.BOP.ADD || n.op == Ast.BOP.MUL || n.op == Ast.BOP.DIV) {
       if (!((e1_type instanceof Ast.IntType) && (e2_type instanceof Ast.IntType))) {
+        // System.out.println(n.e1);
+        // System.out.println(n.e2);
         throw new TypeException("(In Binop) Operand types don't match: " + e1_type
         + " " + n.op + " " + e2_type);
       }
@@ -594,15 +580,39 @@ public class Checker {
   //  String nm;
   //  Exp[] args;
   //
-  //  (See the hints in CallStmt.)
+  //  1. Check that n.obj is ObjType and the corresponding class exists.
+  //  2. Check that the method n.nm exists.
+  //  3. Check that the count and types of the actual arguments match those of
+  //     the formal parameters.
   //  In addition, this routine needs to return the method's return type.
   //
   static Ast.Type check(Ast.Call n) throws Exception {
-    Ast.Type obj_type = check(n.obj);
+    // System.out.println("In Call");
+
+    Ast.Type obj_type = check(n.obj); // Returns Ast.ObjType
+    ClassInfo class_obj = classEnv.get(((Ast.ObjType)obj_type).nm);
     Ast.Type cur_method_type = thisMDecl.t;
-    Ast.MethodDecl cur_method_decl = thisCInfo.findMethodDecl(n.nm);
+
+    // System.out.println(class_obj.className());
+
+    // 1. Make sure n.obj is ObjType
+    if (!(obj_type instanceof Ast.ObjType)) {
+      throw new TypeException("(In Call) Not ObjType");
+    }
+
+    // 2. Make sure the object exists
+    if (class_obj == null) {
+      throw new TypeException("(In Call) Class doesn't exist");
+    }
+
+    // 2.5. Make sure n.nm exists by checking methodDecls
+    Ast.MethodDecl mthd_info = class_obj.findMethodDecl(n.nm);
+    if (mthd_info == null) {
+      throw new TypeException("(In CallStmt) Can't find method " + n.nm);
+    }
 
     // First make sure arg count is the same
+    Ast.MethodDecl cur_method_decl = class_obj.findMethodDecl(n.nm);
     int given_arg_count = n.args.length;
     int required_arg_count = cur_method_decl.params.length;
 
@@ -614,17 +624,9 @@ public class Checker {
     // Now make sure the types are correct
     for (int i=0; i < required_arg_count; ++i) {
       Ast.Type required_type = cur_method_decl.params[i].t;
-      Ast.Type got_type;
-      if (n.args[i] instanceof Ast.IntLit) {
-        got_type = new Ast.IntType();
-      } else if (n.args[i] instanceof Ast.BoolLit) {
-        got_type = new Ast.BoolType();
-      } else {
-        got_type = typeEnv.get(n.args[i].toString());
-      }
+      Ast.Type got_type = check(n.args[i]);
 
-      if (!((required_type instanceof Ast.IntType) && (got_type instanceof Ast.IntType))
-      && !((required_type instanceof Ast.BoolType) && (got_type instanceof Ast.BoolType)) ){
+      if (!(assignable(got_type, cur_method_decl.params[i].t))) {
         throw new TypeException("(In Call) Param and arg types don't match: " +
           required_type + " vs. " + got_type);
       }
@@ -665,7 +667,7 @@ public class Checker {
 
     if ((ar_type instanceof Ast.ArrayType)) {
       if (idx_type instanceof Ast.IntType) {
-        return new Ast.ArrayType(idx_type);
+        return new Ast.IntType();
       } else {
         throw new TypeException("(In ArrayElm) Index is not integer: " + idx_type);
       }
@@ -714,7 +716,8 @@ public class Checker {
       throw new TypeException("(In Field) Can't find field " + n.nm);
     }
 
-    return obj_type;
+    // Find declaration
+    return valid_field.t;
   }
 
   // Id ---
@@ -727,6 +730,7 @@ public class Checker {
   //
   static Ast.Type check(Ast.Id n) throws Exception {
     Ast.Type idType = typeEnv.get(n.nm);
+    // System.out.println(idType);
     if (idType != null) {
       return idType;
     } else {
