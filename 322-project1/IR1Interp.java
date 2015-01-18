@@ -501,17 +501,6 @@ public class IR1Interp {
   //  Dest rdst;
   //
   static int execute(IR1.Call n) throws Exception {
-    /*
-      For the CALL instruction... For a user-defined function, the interpreter should take the following steps:
-      – create a new set of data structures for the callee,
-      – evaluate arguments and pass them to callee’s data structures,
-      – find callee’s AST node and switch to execute it,
-      – if a return value is expected, copy the return value to its destination.
-      The details of parameter passing depends on your data structure implementation. One possibility
-      is to pass the parameters’ values to the callee’s variable environment.
-      For passing a return value from callee to caller, a simple approach is to use a global variable, which can be accessed by both parties.
-     */
-
     if (n.name.equals("printInt") || n.name.equals("printStr")) {    // pre-defined functions with 0 or 1 arg
       Val arg = new StrVal("");
       if (n.args.length > 0) {
@@ -521,20 +510,45 @@ public class IR1Interp {
       return CONTINUE;
     } else if (n.name.equals("malloc")) {
       Val size = evaluate(n.args[0]);
-      for (int i=0; i<=((IntVal)size).i; ++i) {
+      int currentHeapSize = heap.size();
+
+      for (int i=currentHeapSize; i<=((IntVal)size).i + currentHeapSize; ++i) {
         heap.add(i, new UndVal());
       }
 
       // dest = first index of heap?
       if (n.rdst instanceof IR1.Id) {
-        funcVarMap.get(curFunction).put(((IR1.Id) n.rdst).toString(), new IntVal(0));
+        funcVarMap.get(curFunction).put(((IR1.Id) n.rdst).toString(), new IntVal(currentHeapSize));
       } else if (n.rdst instanceof IR1.Temp) {
-        funcTempMap.get(curFunction).put(((IR1.Temp) n.rdst).num, new IntVal(0));
+        funcTempMap.get(curFunction).put(((IR1.Temp) n.rdst).num, new IntVal(currentHeapSize));
       }
 
       return CONTINUE;
     }
 
+    /* User defined functions */
+
+    // 1: create a new set of data structures for the callee
+    HashMap labelMap = new HashMap<String,Integer>();
+    HashMap varMap   = new HashMap<String,Val>();
+    HashMap tempMap  = new HashMap<Integer,Val>();
+
+    funcLabelMap.put(n.name, labelMap);
+    funcVarMap.put(n.name, varMap);
+    funcTempMap.put(n.name, tempMap);
+
+    // 2: evaluate arguments and pass them to callee's data structures
+
+
+    // 3: Find callee's AST node and switch to execute it (???)
+    execute((IR1.Func) funcMap.get(n.name));
+
+    // 4: If a return value is expected, copy the value to its destination
+    if (n.rdst instanceof IR1.Id) {
+      funcVarMap.get(curFunction).put(((IR1.Id) n.rdst).toString(), retVal);
+    } else if (n.rdst instanceof IR1.Temp) {
+      funcTempMap.get(curFunction).put(((IR1.Temp) n.rdst).num, retVal);
+    }
     return CONTINUE;
   }
 
@@ -546,7 +560,8 @@ public class IR1Interp {
     if (n.val == null) {
       return RETURN;
     } else {
-      return RETURN; // this will be where the global return var is assigned
+      retVal = evaluate(n.val);
+      return RETURN;
     }
   }
 
