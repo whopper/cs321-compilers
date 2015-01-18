@@ -302,6 +302,7 @@ public class IR1Interp {
 
     String op = n.op.toString();
     if (op == "+") {
+
       Val sum = new IR1Interp.IntVal((((IR1Interp.IntVal)srcValue1).i) + (((IR1Interp.IntVal)srcValue2).i));
       if (n.dst instanceof IR1.Id) {
         funcVarMap.get(curFunction).put(((IR1.Id)n.dst).toString(), sum);
@@ -401,21 +402,28 @@ public class IR1Interp {
   //  Dest dst;
   //  Addr addr;
   //  Dest "=" Addr, so t1 = [a]
-  //  An addr is [<IntLit>] "[" Src "]"
+  //  An addr is [<IntLit>] "[" Src "]"  -- load some offset from the heap into a destination
   static int execute(IR1.Load n) throws Exception {
-    // Probably need to use the heap. Are these arrays?
+    int addrIndex = evaluate(n.addr);
+    Val result = heap.get(addrIndex);
 
+    if (n.dst instanceof IR1.Id) {
+      funcVarMap.get(curFunction).put(((IR1.Id) n.dst).toString(), result);
+    } else if (n.dst instanceof IR1.Temp) {
+      funcTempMap.get(curFunction).put(((IR1.Temp) n.dst).num, result);
+    }
     return CONTINUE;
   }
 
   // Store ---  
   //  Addr addr;
   //  Src src;
-  // Addr "=" Src, so [t1] = a
+  // Addr "=" Src, so [t1] = a --- store something into some offset in the heap
   static int execute(IR1.Store n) throws Exception {
-
-    // ... code needed ...
-    // me
+    // Get integer value of addr, use it as offset for heap to store sec
+    int addrIndex = evaluate(n.addr);
+    Val srcValue = evaluate(n.src);
+    heap.add(addrIndex, srcValue);
     return CONTINUE;
   }
 
@@ -429,7 +437,6 @@ public class IR1Interp {
     boolean ropVal = false;
     Val srcValue1 = evaluate(n.src1);
     Val srcValue2 = evaluate(n.src2);
-
 
     String op = n.op.toString();
     if (op == "==") {
@@ -510,8 +517,21 @@ public class IR1Interp {
       if (n.args.length > 0) {
         arg = evaluate(n.args[0]);
       }
-
       System.out.println(arg);
+      return CONTINUE;
+    } else if (n.name.equals("malloc")) {
+      Val size = evaluate(n.args[0]);
+      for (int i=0; i<=((IntVal)size).i; ++i) {
+        heap.add(i, new UndVal());
+      }
+
+      // dest = first index of heap?
+      if (n.rdst instanceof IR1.Id) {
+        funcVarMap.get(curFunction).put(((IR1.Id) n.rdst).toString(), new IntVal(0));
+      } else if (n.rdst instanceof IR1.Temp) {
+        funcTempMap.get(curFunction).put(((IR1.Temp) n.rdst).num, new IntVal(0));
+      }
+
       return CONTINUE;
     }
 
@@ -540,11 +560,11 @@ public class IR1Interp {
   //  Src base;  
   //  int offset;
   //
-  static int evalute(IR1.Addr n) throws Exception {
-
-    // ... code needed ...
-    // me
-    return CONTINUE;
+  static int evaluate(IR1.Addr n) throws Exception {
+    Val srcValue = evaluate(n.base);
+    //System.out.println("base " + srcValue);
+    //System.out.println("offset " + n.offset);
+    return Integer.parseInt(srcValue.toString()) + n.offset;
   }
 
   //-----------------------------------------------------------------
