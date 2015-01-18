@@ -91,10 +91,6 @@ public class IR1Interp {
   // Reference to current function environment
   static String curFunction;
 
-  //static HashMap<String, Integer> curLabelMap;
-  //static HashMap<Integer, Val> curTempMap;
-  //static HashMap<String, Val> curVarMap;
-
   //-----------------------------------------------------------------
   // Global variables and constants
   //-----------------------------------------------------------------
@@ -173,39 +169,6 @@ public class IR1Interp {
       funcMap.put(f.name, f);
 
     execute((IR1.Func) funcMap.get("main"));  // Start interpreting from main's AST node
-
-/*
-    for (Map.Entry<String, HashMap<Integer, Val>> entry : funcTempMap.entrySet()) {
-      String key = entry.getKey();
-      HashMap<Integer, Val> value = entry.getValue();
-      System.out.println(key);
-      //System.out.println(value.get("a"));
-    }
-
-    System.out.println((funcTempMap.get("main")).get(2));
-    System.out.println((funcTempMap.get("derp")).get(1));
-
-    System.out.println((funcVarMap.get("main")).get("c"));
-    System.out.println((funcVarMap.get("derp")).get("a"));
-
-    System.out.println((funcVarMap.get("main")).get("d"));
-    System.out.println((funcVarMap.get("derp")).get("b"));
-
-    System.out.println((funcVarMap.get("main")).get("e"));
-    System.out.println((funcVarMap.get("main")).get("f"));
-    System.out.println((funcVarMap.get("main")).get("g"));
-    System.out.println((funcVarMap.get("main")).get("h"));
-    System.out.println((funcVarMap.get("main")).get("i"));
-    System.out.println((funcVarMap.get("main")).get("j"));
-
-    System.out.println((funcVarMap.get("main")).get("k"));
-    System.out.println((funcVarMap.get("main")).get("l"));
-    System.out.println((funcVarMap.get("main")).get("m"));
-
-    System.out.println((funcVarMap.get("main")).get("o"));
-    System.out.println((funcVarMap.get("main")).get("p"));
-    System.out.println((funcVarMap.get("main")).get("q"));
-*/
   }
 
   // Func ---
@@ -577,8 +540,6 @@ public class IR1Interp {
   //
   static int evaluate(IR1.Addr n) throws Exception {
     Val srcValue = evaluate(n.base);
-    //System.out.println("base " + srcValue);
-    //System.out.println("offset " + n.offset);
     return Integer.parseInt(srcValue.toString()) + n.offset;
   }
 
