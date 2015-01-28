@@ -201,6 +201,12 @@ public class IR1Interp {
       varMap.put(n.locals[i], new UndVal());
     }
 
+    // Load up params. We need to match arg[0-9] with order of specified params
+    // This is a dirty hack, like the rest of this code. I'm so sorry.
+    for (int i=0; i < n.params.length; ++i) {
+      varMap.put(n.params[i], funcVarMap.get(n.name).get("arg" + i));
+    }
+
     // Load this function's context into the global function lookup tables
     funcLabelMap.put(n.name, labelMap);
     funcVarMap.put(n.name, varMap);
@@ -501,9 +507,14 @@ public class IR1Interp {
     funcTempMap.put(n.name, tempMap);
 
     // 2: evaluate arguments and pass them to callee's data structures
+    int numArgs = n.args.length;
+    Val paramValue;
+    for (int i=0; i < numArgs; ++i) {
+      paramValue = evaluate(n.args[i]);
+      funcVarMap.get(n.name).put("arg" + i, paramValue);
+    }
 
-
-    // 3: Find callee's AST node and switch to execute it (???)
+    // 3: Find callee's AST node and switch to execute it
     execute((IR1.Func) funcMap.get(n.name));
 
     // 4: If a return value is expected, copy the value to its destination
