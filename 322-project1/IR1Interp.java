@@ -458,9 +458,7 @@ public class IR1Interp {
   //  Label lab;
   //  should return the jump target instruction’s index.
   static int execute(IR1.Jump n) throws Exception {
-
-    int target = funcLabelMap.get(curFunction).get(n.lab);
-    System.out.println(target);
+    int target = funcLabelMap.get(curFunction).get(n.lab.toString());
     return target;
   }	
 
