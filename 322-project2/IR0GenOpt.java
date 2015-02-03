@@ -123,8 +123,23 @@ class IR0GenOpt {
   //
   static List<IR0.Inst> gen(Ast0.If n) throws Exception {
     List<IR0.Inst> code = new ArrayList<IR0.Inst>();
-    IR0.Label L1 = new IR0.Label();
     CodePack p = gen(n.cond);
+
+    if (p.src instanceof IR0.BoolLit) {
+      if (((IR0.BoolLit) p.src).b == true) {
+        code.addAll(gen(n.s1));
+        return code;
+      } else {
+        if (n.s2 != null) { // Execute else stmt instead
+          code.addAll(gen(n.s2));
+          return code;
+        } else {
+          return code;
+        }
+      }
+    }
+
+    IR0.Label L1 = new IR0.Label();
     code.addAll(p.code);
     code.add(new IR0.CJump(IR0.ROP.EQ, p.src, IR0.FALSE, L1));
     code.addAll(gen(n.s1));
@@ -155,10 +170,20 @@ class IR0GenOpt {
   //
   static List<IR0.Inst> gen(Ast0.While n) throws Exception {
     List<IR0.Inst> code = new ArrayList<IR0.Inst>();
+    CodePack p = gen(n.cond);
+
+    if (p.src instanceof IR0.BoolLit) {
+      if (((IR0.BoolLit) p.src).b == true) {
+        code.addAll(gen(n.s));
+        return code;
+      } else {
+        return code;
+      }
+    }
+
     IR0.Label L1 = new IR0.Label();
     IR0.Label L2 = new IR0.Label();
     code.add(new IR0.LabelDec(L1));
-    CodePack p = gen(n.cond);
     code.addAll(p.code);
     code.add(new IR0.CJump(IR0.ROP.EQ, p.src, IR0.FALSE, L2));
     code.addAll(gen(n.s));
@@ -331,10 +356,12 @@ class IR0GenOpt {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
         } else {
-          code.addAll(l.code);
-          code.addAll(r.code);
-          code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-          return new CodePack(t, code);
+          IR0.Id opt_val = new IR0.Id(r.src.toString());
+          return new CodePack(opt_val);
+          //code.addAll(l.code);
+          //code.addAll(r.code);
+          //code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
+          //return new CodePack(t, code);
         }
       }
 
@@ -359,7 +386,7 @@ class IR0GenOpt {
         IR0.BoolLit opt_val = new IR0.BoolLit(false);
         return new CodePack(opt_val);
       }
-    } else {
+    } else { // This is an AND
       if (l.src instanceof IR0.BoolLit && r.src instanceof IR0.BoolLit) {
         if ((((IR0.BoolLit) l.src).b) && (((IR0.BoolLit) r.src).b)){
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
@@ -382,6 +409,7 @@ class IR0GenOpt {
       }
     }
 
+    // Code to be produced if no optimizations can be made
 /*
     //List<IR0.Inst> code = new ArrayList<IR0.Inst>();
     IR0.BoolLit val = (n.op==Ast0.BOP.OR) ? IR0.TRUE : IR0.FALSE;
@@ -419,6 +447,62 @@ class IR0GenOpt {
     CodePack l = gen(n.e1);
     CodePack r = gen(n.e2);
     IR0.Temp t = new IR0.Temp();
+
+    if (n.op == Ast0.BOP.EQ) {
+      if (l.src instanceof IR0.IntLit) {
+        if (((IR0.IntLit) l.src).i == ((IR0.IntLit) r.src).i) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
+      } else {
+        if ((((IR0.BoolLit) l.src).b) == (((IR0.BoolLit) r.src).b)) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
+      }
+    } else if (n.op == Ast0.BOP.NE) {
+      if (l.src instanceof IR0.IntLit) {
+        if (((IR0.IntLit) l.src).i != ((IR0.IntLit) r.src).i) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
+      } else {
+        if ((((IR0.BoolLit) l.src).b) != (((IR0.BoolLit) r.src).b)) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
+      }
+    } else if(n.op == Ast0.BOP.LT) {
+      if (((IR0.IntLit) l.src).i < ((IR0.IntLit) r.src).i) {
+        IR0.BoolLit opt_val = new IR0.BoolLit(true);
+        return new CodePack(opt_val);
+      } else {
+        IR0.BoolLit opt_val = new IR0.BoolLit(false);
+        return new CodePack(opt_val);
+      }
+    } else if(n.op == Ast0.BOP.GT) {
+      if (((IR0.IntLit) l.src).i > ((IR0.IntLit) r.src).i) {
+        IR0.BoolLit opt_val = new IR0.BoolLit(true);
+        return new CodePack(opt_val);
+      } else {
+        IR0.BoolLit opt_val = new IR0.BoolLit(false);
+        return new CodePack(opt_val);
+      }
+    }
+
+
     IR0.Label L = new IR0.Label();
     code.addAll(l.code);
     code.addAll(r.code);
@@ -427,6 +511,7 @@ class IR0GenOpt {
     code.add(new IR0.Move(t, IR0.FALSE));
     code.add(new IR0.LabelDec(L));
     return new CodePack(t, code);
+
   }
 
   // Ast0.Unop ---
