@@ -371,10 +371,12 @@ class IR0GenOpt {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
         } else {
-          code.addAll(l.code);
-          code.addAll(r.code);
-          code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-          return new CodePack(t, code);
+          IR0.Id opt_val = new IR0.Id(l.src.toString());
+          return new CodePack(opt_val);
+          //code.addAll(l.code);
+          //code.addAll(r.code);
+          //code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
+          //return new CodePack(t, code);
         }
       }
 
