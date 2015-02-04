@@ -139,10 +139,14 @@ class IR0GenOpt {
           code.addAll(gen(n.s1));
           return code;
         } else {
+          if (n.s2 != null) {
+            code.addAll(gen(n.s2));
+          }
           return code;
         }
       }
 
+      /* TODO: Add support for every relational operator */
       if (((Ast0.Binop)n.cond).op == Ast0.BOP.GT) {
         code.addAll(l.code);
         code.addAll(r.code);
@@ -223,6 +227,7 @@ class IR0GenOpt {
         }
       }
 
+      /* TODO: Add support for every relational operator */
       if (((Ast0.Binop)n.cond).op == Ast0.BOP.EQ) {
         code.add(new IR0.LabelDec(L1));
         code.add(new IR0.CJump(IR0.ROP.NE, l.src, r.src, L2));
@@ -349,7 +354,6 @@ class IR0GenOpt {
     code.addAll(r.code);
     code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
     return new CodePack(t, code);
-
   }
 
   // Ast0.Binop --- logical op case
@@ -416,10 +420,6 @@ class IR0GenOpt {
         } else {
           IR0.Id opt_val = new IR0.Id(l.src.toString());
           return new CodePack(opt_val);
-          //code.addAll(l.code);
-          //code.addAll(r.code);
-          //code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-          //return new CodePack(t, code);
         }
       }
 
@@ -556,7 +556,6 @@ class IR0GenOpt {
     code.add(new IR0.Move(t, IR0.FALSE));
     code.add(new IR0.LabelDec(L));
     return new CodePack(t, code);
-
   }
 
   // Ast0.Unop ---
@@ -714,5 +713,5 @@ class IR0GenOpt {
     }
     return false;
   }
-   
+
 }
