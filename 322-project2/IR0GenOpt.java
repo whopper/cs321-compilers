@@ -123,6 +123,38 @@ class IR0GenOpt {
   //
   static List<IR0.Inst> gen(Ast0.If n) throws Exception {
     List<IR0.Inst> code = new ArrayList<IR0.Inst>();
+    IR0.Label L1 = new IR0.Label();
+
+    /* First check if cond is a relational expression */
+
+    if (n.cond instanceof Ast0.Binop) {
+      CodePack l = gen(((Ast0.Binop)n.cond).e1);
+      CodePack r = gen(((Ast0.Binop)n.cond).e2);
+
+      // Can we evaluate right now?
+      if (((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit))
+              || ((l.src instanceof IR0.BoolLit) && (r.src instanceof IR0.BoolLit))) {
+        CodePack result = gen(((Ast0.Binop)n.cond));
+        if (((IR0.BoolLit) result.src).b) {
+          code.addAll(gen(n.s1));
+          return code;
+        } else {
+          return code;
+        }
+      }
+
+      if (((Ast0.Binop)n.cond).op == Ast0.BOP.GT) {
+        code.addAll(l.code);
+        code.addAll(r.code);
+        code.add(new IR0.CJump(IR0.ROP.LE, l.src, r.src, L1));
+        code.addAll(gen(n.s1));
+        code.add(new IR0.LabelDec(L1));
+        return code;
+      }
+    }
+
+    // If we can't do comparison embedding, move on
+
     CodePack p = gen(n.cond);
 
     if (p.src instanceof IR0.BoolLit) {
@@ -139,7 +171,6 @@ class IR0GenOpt {
       }
     }
 
-    IR0.Label L1 = new IR0.Label();
     code.addAll(p.code);
     code.add(new IR0.CJump(IR0.ROP.EQ, p.src, IR0.FALSE, L1));
     code.addAll(gen(n.s1));
@@ -170,6 +201,48 @@ class IR0GenOpt {
   //
   static List<IR0.Inst> gen(Ast0.While n) throws Exception {
     List<IR0.Inst> code = new ArrayList<IR0.Inst>();
+    IR0.Label L1 = new IR0.Label();
+    IR0.Label L2 = new IR0.Label();
+    /* First, check if cond is a relational expression */
+    // EQ("=="), NE("!="), LT("<"), LE("<="), GT(">"), GE(">=")
+
+    if (n.cond instanceof Ast0.Binop) {
+      CodePack l = gen(((Ast0.Binop)n.cond).e1);
+      CodePack r = gen(((Ast0.Binop)n.cond).e2);
+
+      // Can we evaluate right now?
+      if (((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit))
+              || ((l.src instanceof IR0.BoolLit) && (r.src instanceof IR0.BoolLit))) {
+
+        CodePack result = gen(((Ast0.Binop)n.cond));
+        if (((IR0.BoolLit) result.src).b) {
+          code.addAll(gen(n.s));
+          return code;
+        } else {
+          return code;
+        }
+      }
+
+      if (((Ast0.Binop)n.cond).op == Ast0.BOP.EQ) {
+        code.add(new IR0.LabelDec(L1));
+        code.add(new IR0.CJump(IR0.ROP.NE, l.src, r.src, L2));
+        code.addAll(gen(n.s));
+        code.add(new IR0.Jump(L1));
+        code.add(new IR0.LabelDec(L2));
+        return code;
+      } else if (((Ast0.Binop)n.cond).op == Ast0.BOP.GT) {
+        code.add(new IR0.LabelDec(L1));
+        code.addAll(l.code);
+        code.addAll(r.code);
+        code.add(new IR0.CJump(IR0.ROP.LE, l.src, r.src, L2));
+        code.addAll(gen(n.s));
+        code.add(new IR0.Jump(L1));
+        code.add(new IR0.LabelDec(L2));
+        return code;
+      }
+    }
+
+    // If we can't do comparison embedding, move on
     CodePack p = gen(n.cond);
 
     if (p.src instanceof IR0.BoolLit) {
@@ -181,8 +254,6 @@ class IR0GenOpt {
       }
     }
 
-    IR0.Label L1 = new IR0.Label();
-    IR0.Label L2 = new IR0.Label();
     code.add(new IR0.LabelDec(L1));
     code.addAll(p.code);
     code.add(new IR0.CJump(IR0.ROP.EQ, p.src, IR0.FALSE, L2));
@@ -227,7 +298,7 @@ class IR0GenOpt {
   // Ast0.Binop
 
   static CodePack gen(Ast0.Binop n) throws Exception {
-    if (isAOP(n.op))      return genAOP(n);
+    if (isAOP(n.op)) return genAOP(n);
     else if (isROP(n.op)) return genROP(n);
     else                  return genLOP(n);
   }
@@ -312,7 +383,6 @@ class IR0GenOpt {
 
       // If either right or left is true, return true
       // true || false, true || true, true || x, x || true
-
       if (l.src instanceof IR0.BoolLit) {
         left_can_eval = true;
         left_value = ((IR0.BoolLit) l.src).b;
@@ -335,10 +405,6 @@ class IR0GenOpt {
         } else {
           IR0.Id opt_val = new IR0.Id(r.src.toString());
           return new CodePack(opt_val);
-          //code.addAll(l.code);
-          //code.addAll(r.code);
-          //code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-          //return new CodePack(t, code);
         }
       }
 
