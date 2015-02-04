@@ -565,6 +565,16 @@ class IR0GenOpt {
     List<IR0.Inst> code = new ArrayList<IR0.Inst>();
     CodePack ar = gen(n.ar);
     CodePack idx = gen(n.idx);
+
+
+    if (idx.src instanceof IR0.IntLit) {
+      int offset = ((IR0.IntLit)idx.src).i * 4;
+      IR0.Id base = new IR0.Id(ar.src.toString());
+      IR0.Addr opt_addr = new IR0.Addr(base, offset);
+      return new IR0GenOpt.AddrPack(opt_addr);
+    }
+
+    // If no optimization can be made, continue with default IR code
     code.addAll(ar.code);
     code.addAll(idx.code);
     IR0.Temp t1 = new IR0.Temp();
