@@ -249,57 +249,36 @@ class IR0GenOpt {
     int int_result;
 
     if (n.op == Ast0.BOP.ADD) {
-      if (l.src instanceof IR0.IntLit) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         int_result = ((IR0.IntLit) l.src).i + ((IR0.IntLit) r.src).i;
         IR0.IntLit opt_val = new IR0.IntLit(int_result);
         return new CodePack(opt_val);
-      } else {
-        code.addAll(l.code);
-        code.addAll(r.code);
-        code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-        return new CodePack(t, code);
       }
     } else if (n.op == Ast0.BOP.SUB) {
-      if (l.src instanceof IR0.IntLit) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         int_result = ((IR0.IntLit) l.src).i - ((IR0.IntLit) r.src).i;
         IR0.IntLit opt_val = new IR0.IntLit(int_result);
         return new CodePack(opt_val);
-      } else {
-        code.addAll(l.code);
-        code.addAll(r.code);
-        code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-        return new CodePack(t, code);
       }
     } else if (n.op == Ast0.BOP.MUL) {
-      if (l.src instanceof IR0.IntLit) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         int_result = ((IR0.IntLit) l.src).i * ((IR0.IntLit) r.src).i;
         IR0.IntLit opt_val = new IR0.IntLit(int_result);
         return new CodePack(opt_val);
-      } else {
-        code.addAll(l.code);
-        code.addAll(r.code);
-        code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-        return new CodePack(t, code);
       }
     } else {
-      if (l.src instanceof IR0.IntLit) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         int_result = ((IR0.IntLit) l.src).i / ((IR0.IntLit) r.src).i;
         IR0.IntLit opt_val = new IR0.IntLit(int_result);
         return new CodePack(opt_val);
-      } else {
-        code.addAll(l.code);
-        code.addAll(r.code);
-        code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
-        return new CodePack(t, code);
       }
     }
 
-    /*
     code.addAll(l.code);
     code.addAll(r.code);
     code.add(new IR0.Binop(gen(n.op), t, l.src, r.src));
     return new CodePack(t, code);
-    */
+
   }
 
   // Ast0.Binop --- logical op case
@@ -320,12 +299,10 @@ class IR0GenOpt {
   //         + "L:"                      
   //
   static CodePack genLOP(Ast0.Binop n) throws Exception {
-    /* Simple OR and AND cases */
     List<IR0.Inst> code = new ArrayList<IR0.Inst>();
     CodePack l = gen(n.e1);
     CodePack r = gen(n.e2);
     IR0.Temp t = new IR0.Temp();
-
 
     if (n.op == Ast0.BOP.OR) {
       boolean right_can_eval = false,
@@ -380,6 +357,21 @@ class IR0GenOpt {
         }
       }
 
+      // Case 2.5: Neither right or left are bool literals
+      if (!right_can_eval && !left_can_eval) {
+        IR0.BoolLit val = (n.op==Ast0.BOP.OR) ? IR0.TRUE : IR0.FALSE;
+        IR0.BoolLit nval = (n.op==Ast0.BOP.OR) ? IR0.FALSE : IR0.TRUE;
+        IR0.Label L = new IR0.Label();
+        code.add(new IR0.Move(t, val));
+        code.addAll(l.code);
+        code.add(new IR0.CJump(IR0.ROP.EQ, l.src, val, L));
+        code.addAll(r.code);
+        code.add(new IR0.CJump(IR0.ROP.EQ, r.src, val, L));
+        code.add(new IR0.Move(t, nval));
+        code.add(new IR0.LabelDec(L));
+        return new CodePack(t, code);
+      }
+
       // Case 3: Left and right are both bool literals
       if (right_value || left_value) {
         IR0.BoolLit opt_val = new IR0.BoolLit(true);
@@ -410,25 +402,6 @@ class IR0GenOpt {
         return new CodePack(t, code);
       }
     }
-
-    // Code to be produced if no optimizations can be made
-/*
-    //List<IR0.Inst> code = new ArrayList<IR0.Inst>();
-    IR0.BoolLit val = (n.op==Ast0.BOP.OR) ? IR0.TRUE : IR0.FALSE;
-    IR0.BoolLit nval = (n.op==Ast0.BOP.OR) ? IR0.FALSE : IR0.TRUE;
-    //IR0.Temp t = new IR0.Temp();
-    IR0.Label L = new IR0.Label();
-    code.add(new IR0.Move(t, val));
-    //CodePack l = gen(n.e1);
-    code.addAll(l.code);
-    code.add(new IR0.CJump(IR0.ROP.EQ, l.src, val, L));
-    //CodePack r = gen(n.e2);
-    code.addAll(r.code);
-    code.add(new IR0.CJump(IR0.ROP.EQ, r.src, val, L));
-    code.add(new IR0.Move(t, nval));
-    code.add(new IR0.LabelDec(L));
-    return new CodePack(t, code);
-    */
   }
 
   // Ast0.Binop --- relational op case
@@ -451,7 +424,7 @@ class IR0GenOpt {
     IR0.Temp t = new IR0.Temp();
 
     if (n.op == Ast0.BOP.EQ) {
-      if (l.src instanceof IR0.IntLit) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         if (((IR0.IntLit) l.src).i == ((IR0.IntLit) r.src).i) {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
@@ -459,7 +432,7 @@ class IR0GenOpt {
           IR0.BoolLit opt_val = new IR0.BoolLit(false);
           return new CodePack(opt_val);
         }
-      } else {
+      } else if (((l.src instanceof IR0.BoolLit) && (r.src instanceof IR0.BoolLit))){
         if ((((IR0.BoolLit) l.src).b) == (((IR0.BoolLit) r.src).b)) {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
@@ -469,7 +442,7 @@ class IR0GenOpt {
         }
       }
     } else if (n.op == Ast0.BOP.NE) {
-      if (l.src instanceof IR0.IntLit) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         if (((IR0.IntLit) l.src).i != ((IR0.IntLit) r.src).i) {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
@@ -477,7 +450,7 @@ class IR0GenOpt {
           IR0.BoolLit opt_val = new IR0.BoolLit(false);
           return new CodePack(opt_val);
         }
-      } else {
+      } else if (((l.src instanceof IR0.BoolLit) && (r.src instanceof IR0.BoolLit))){
         if ((((IR0.BoolLit) l.src).b) != (((IR0.BoolLit) r.src).b)) {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
@@ -487,24 +460,28 @@ class IR0GenOpt {
         }
       }
     } else if(n.op == Ast0.BOP.LT) {
-      if (((IR0.IntLit) l.src).i < ((IR0.IntLit) r.src).i) {
-        IR0.BoolLit opt_val = new IR0.BoolLit(true);
-        return new CodePack(opt_val);
-      } else {
-        IR0.BoolLit opt_val = new IR0.BoolLit(false);
-        return new CodePack(opt_val);
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
+        if (((IR0.IntLit) l.src).i < ((IR0.IntLit) r.src).i) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
       }
     } else if(n.op == Ast0.BOP.GT) {
-      if (((IR0.IntLit) l.src).i > ((IR0.IntLit) r.src).i) {
-        IR0.BoolLit opt_val = new IR0.BoolLit(true);
-        return new CodePack(opt_val);
-      } else {
-        IR0.BoolLit opt_val = new IR0.BoolLit(false);
-        return new CodePack(opt_val);
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
+        if (((IR0.IntLit) l.src).i > ((IR0.IntLit) r.src).i) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
       }
     }
 
-
+    /* If no optimizations can be made, fall through to default IR code */
     IR0.Label L = new IR0.Label();
     code.addAll(l.code);
     code.addAll(r.code);
@@ -533,16 +510,23 @@ class IR0GenOpt {
     int result;
     boolean bool_result;
 
-    /* TODO: If it's NEG AND we know its an int. Otherwise just return expression as normal since we can't eval*/
     if (n.op == Ast0.UOP.NEG) {
-      result = -(((IR0.IntLit) p.src).i);
-      IR0.IntLit opt_val = new IR0.IntLit(result);
-      return new CodePack(opt_val);
+      if (p.src instanceof IR0.IntLit) {
+        result = -(((IR0.IntLit) p.src).i);
+        IR0.IntLit opt_val = new IR0.IntLit(result);
+        return new CodePack(opt_val);
+      }
     } else {
-      bool_result = !(((IR0.BoolLit) p.src).b);
-      IR0.BoolLit opt_val = new IR0.BoolLit(bool_result);
-      return new CodePack(opt_val);
+      if (p.src instanceof IR0.BoolLit) {
+        bool_result = !(((IR0.BoolLit) p.src).b);
+        IR0.BoolLit opt_val = new IR0.BoolLit(bool_result);
+        return new CodePack(opt_val);
+      }
     }
+
+    // If no optimizations to be made, return expression
+    code.add(new IR0.Unop(op, t, p.src));
+    return new CodePack(t, code);
   }
   
   // Ast0.NewArray ---
