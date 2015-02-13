@@ -146,14 +146,36 @@ class IR0GenOpt {
         }
       }
 
-      /* TODO: Add support for every relational operator */
-      if (((Ast0.Binop)n.cond).op == Ast0.BOP.GT) {
+      if (isROP(((Ast0.Binop) n.cond).op)) {
         code.addAll(l.code);
         code.addAll(r.code);
-        code.add(new IR0.CJump(IR0.ROP.LE, l.src, r.src, L1));
-        code.addAll(gen(n.s1));
-        code.add(new IR0.LabelDec(L1));
-        return code;
+
+        if (((Ast0.Binop) n.cond).op == Ast0.BOP.GT) {
+          code.add(new IR0.CJump(IR0.ROP.LE, l.src, r.src, L1));
+          code.addAll(gen(n.s1));
+          code.add(new IR0.LabelDec(L1));
+          return code;
+        } else if (((Ast0.Binop) n.cond).op == Ast0.BOP.GE) {
+          code.add(new IR0.CJump(IR0.ROP.LT, l.src, r.src, L1));
+          code.addAll(gen(n.s1));
+          code.add(new IR0.LabelDec(L1));
+        } else if (((Ast0.Binop) n.cond).op == Ast0.BOP.LT) {
+          code.add(new IR0.CJump(IR0.ROP.GE, l.src, r.src, L1));
+          code.addAll(gen(n.s1));
+          code.add(new IR0.LabelDec(L1));
+        } else if (((Ast0.Binop) n.cond).op == Ast0.BOP.LE) {
+          code.add(new IR0.CJump(IR0.ROP.GT, l.src, r.src, L1));
+          code.addAll(gen(n.s1));
+          code.add(new IR0.LabelDec(L1));
+        } else if (((Ast0.Binop) n.cond).op == Ast0.BOP.EQ) {
+          code.add(new IR0.CJump(IR0.ROP.NE, l.src, r.src, L1));
+          code.addAll(gen(n.s1));
+          code.add(new IR0.LabelDec(L1));
+        } else if (((Ast0.Binop) n.cond).op == Ast0.BOP.NE) {
+          code.add(new IR0.CJump(IR0.ROP.EQ, l.src, r.src, L1));
+          code.addAll(gen(n.s1));
+          code.add(new IR0.LabelDec(L1));
+        }
       }
     }
 
@@ -240,6 +262,33 @@ class IR0GenOpt {
         code.addAll(l.code);
         code.addAll(r.code);
         code.add(new IR0.CJump(IR0.ROP.LE, l.src, r.src, L2));
+        code.addAll(gen(n.s));
+        code.add(new IR0.Jump(L1));
+        code.add(new IR0.LabelDec(L2));
+        return code;
+      } else if (((Ast0.Binop)n.cond).op == Ast0.BOP.GE) {
+        code.add(new IR0.LabelDec(L1));
+        code.addAll(l.code);
+        code.addAll(r.code);
+        code.add(new IR0.CJump(IR0.ROP.LT, l.src, r.src, L2));
+        code.addAll(gen(n.s));
+        code.add(new IR0.Jump(L1));
+        code.add(new IR0.LabelDec(L2));
+        return code;
+      } else if (((Ast0.Binop)n.cond).op == Ast0.BOP.LT) {
+        code.add(new IR0.LabelDec(L1));
+        code.addAll(l.code);
+        code.addAll(r.code);
+        code.add(new IR0.CJump(IR0.ROP.GE, l.src, r.src, L2));
+        code.addAll(gen(n.s));
+        code.add(new IR0.Jump(L1));
+        code.add(new IR0.LabelDec(L2));
+        return code;
+      } else if (((Ast0.Binop)n.cond).op == Ast0.BOP.LE) {
+        code.add(new IR0.LabelDec(L1));
+        code.addAll(l.code);
+        code.addAll(r.code);
+        code.add(new IR0.CJump(IR0.ROP.GT, l.src, r.src, L2));
         code.addAll(gen(n.s));
         code.add(new IR0.Jump(L1));
         code.add(new IR0.LabelDec(L2));
@@ -535,9 +584,29 @@ class IR0GenOpt {
           return new CodePack(opt_val);
         }
       }
+    } else if (n.op == Ast0.BOP.LE) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
+        if (((IR0.IntLit) l.src).i <= ((IR0.IntLit) r.src).i) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
+      }
     } else if(n.op == Ast0.BOP.GT) {
       if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
         if (((IR0.IntLit) l.src).i > ((IR0.IntLit) r.src).i) {
+          IR0.BoolLit opt_val = new IR0.BoolLit(true);
+          return new CodePack(opt_val);
+        } else {
+          IR0.BoolLit opt_val = new IR0.BoolLit(false);
+          return new CodePack(opt_val);
+        }
+      }
+    } else if (n.op == Ast0.BOP.GE) {
+      if ((l.src instanceof IR0.IntLit) && (r.src instanceof IR0.IntLit)) {
+        if (((IR0.IntLit) l.src).i >= ((IR0.IntLit) r.src).i) {
           IR0.BoolLit opt_val = new IR0.BoolLit(true);
           return new CodePack(opt_val);
         } else {
