@@ -8,6 +8,8 @@
 
 import java.util.*;
 import java.io.*;
+import java.util.ArrayList;
+
 import ast.*;
 import ir.*;
 
@@ -332,11 +334,21 @@ public class IRGen {
   //       global label "class_<class name>"
   //
   static IR.Data genData(Ast.ClassDecl n, ClassInfo cinfo) throws Exception {
+    List<IR.Global> class_methods = new ArrayList<IR.Global>();
+    int data_size = 0;
 
+     //   For each method in class's vtable, construct global label of form "<base class name>_<method name>"
+     //   and save it in an IR.Global node
+    for (String mname: cinfo.vtable) {
+      IR.Global label = new IR.Global(cinfo.className() + "_" + mname);
+      class_methods.add(label);
+      ++data_size;
+    }
 
-    //    ... need code
-
-
+    // Assemble the list of IR.Global nodes into an IR.Data node with a global label "class_<class name>"
+    IR.Global data_name = new IR.Global("class_" + cinfo.className());
+    IR.Data data_global = new IR.Data(data_name, data_size, class_methods);
+    return data_global;
   }
 
   // 2. Generate code
@@ -345,11 +357,29 @@ public class IRGen {
   //   Straightforward -- generate a IR.Func for each mthdDecl.
   //
   static List<IR.Func> gen(Ast.ClassDecl n, ClassInfo cinfo) throws Exception {
+    List<IR.Func> func_list = new ArrayList<IR.Func>();
 
+    for (Ast.MethodDecl mdecl: n.mthds) {
+      List<String> params = new ArrayList<String>();
+      List<String> vars = new ArrayList<String>();
+      List<IR.Inst> stmts = new ArrayList<IR.Inst>();
 
-    //    ... need code
+      for (Ast.Param param: mdecl.params)
+        params.add(param.nm);
 
+      for (Ast.VarDecl var: mdecl.vars)
+        vars.add(var.nm);
 
+      for (Ast.Stmt stmt: mdecl.stmts) {
+        // Where does env come from? Apparently there is one for every
+        // method?
+        //stmts.add(gen(stmt, cinfo, <ENV???>));
+      }
+
+      func_list.add(new IR.Func(mdecl.nm, params, vars, stmts));
+    }
+
+    return func_list;
   }
 
   // MethodDecl ---
@@ -529,11 +559,17 @@ public class IRGen {
   // 2. Otherwise, generate an IR.Return with no value
   //
   static List<IR.Inst> gen(Ast.Return n, ClassInfo cinfo, Env env) throws Exception {
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
 
+    if (n.val != null) {
+      CodePack p;
+      p = gen(n.val, cinfo, env);
+      code.add(new IR.Return(p.src));
+    } else {
+      code.add(new IR.Return());
+    }
 
-    //    ... need code
-
-
+    return code;
   }
 
   // EXPRESSIONS
