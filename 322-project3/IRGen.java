@@ -359,25 +359,8 @@ public class IRGen {
   static List<IR.Func> gen(Ast.ClassDecl n, ClassInfo cinfo) throws Exception {
     List<IR.Func> func_list = new ArrayList<IR.Func>();
 
-    for (Ast.MethodDecl mdecl: n.mthds) {
-      List<String> params = new ArrayList<String>();
-      List<String> vars = new ArrayList<String>();
-      List<IR.Inst> stmts = new ArrayList<IR.Inst>();
-
-      for (Ast.Param param: mdecl.params)
-        params.add(param.nm);
-
-      for (Ast.VarDecl var: mdecl.vars)
-        vars.add(var.nm);
-
-      for (Ast.Stmt stmt: mdecl.stmts) {
-        // Where does env come from? Apparently there is one for every
-        // method?
-        //stmts.add(gen(stmt, cinfo, <ENV???>));
-      }
-
-      func_list.add(new IR.Func(mdecl.nm, params, vars, stmts));
-    }
+    for (Ast.MethodDecl mdecl: n.mthds)
+      func_list.add(gen(mdecl, cinfo));
 
     return func_list;
   }
@@ -398,11 +381,43 @@ public class IRGen {
   // 5. Return an IR.Func with the above
   //
   static IR.Func gen(Ast.MethodDecl n, ClassInfo cinfo) throws Exception {
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    List<String> params = new ArrayList<String>();
+    List<String> vars = new ArrayList<String>();
 
 
-    //    ... need code
+    if (!n.nm.equals("main")) {
+      // 1) Construct a global label of form "<base class name>_<method name>"
+      IR.Global label = new IR.Global(cinfo.className() + "_" + n.nm);
 
+      // 2) Add "obj" into the params list as the 0th item
+      Ast.Type obj_type = new Ast.ObjType("obj");
+      n.params[0] = new Ast.Param(obj_type, "obj");
+    }
 
+    // 3) Create an Env() containing all params and all local vars
+    Env cur_env = new Env();
+
+    for (Ast.Param param: n.params) {
+      cur_env.put(param.nm, param.t);
+      params.add(param.nm);
+    }
+
+    for (Ast.VarDecl var: n.vars) {
+      cur_env.put(var.nm, var.t);
+      vars.add(var.nm);
+    }
+
+    // 4) Generate IR code for all statements
+    for (Ast.Stmt stmt: n.stmts) {
+      List<IR.Inst> insts = gen(stmt, cinfo, cur_env);
+      for (IR.Inst inst: insts) {
+        code.add(inst);
+      }
+    }
+
+    // 5) Return an IR.Func with the above
+    return new IR.Func(n.nm, params, vars, code);
   } 
 
   // VarDecl ---
@@ -417,10 +432,23 @@ public class IRGen {
   private static List<IR.Inst> gen(Ast.VarDecl n, ClassInfo cinfo, 
 				    Env env) throws Exception {
 
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
 
-    //    ... need code
+    // 1) If init exp not null, generate IR code for it, assign result to var
+    if (n.init != null) {
+      // Add an assign inst for nm = <code for init>
+      CodePack p = gen(n.init, cinfo, env);
+      code.addAll(p.code);
+      IR.Dest lhs = new IR.Id(n.nm);
+      code.add(new IR.Move(lhs, p.src));
+    }
 
-
+    // 2) return generated code (or null if none)
+    if (code.size() > 0) {
+      return code;
+    } else {
+      return null;
+    }
   }
 
   // STATEMENTS
@@ -443,10 +471,16 @@ public class IRGen {
   //
   static List<IR.Inst> gen(Ast.Block n, ClassInfo cinfo, Env env) throws Exception {
 
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
 
-    //    ... need code
+    for (Ast.Stmt stmt: n.stmts) {
+      List<IR.Inst> insts = gen(stmt, cinfo, env);
+      for (IR.Inst inst: insts) {
+        code.add(inst);
+      }
+    }
 
-
+    return code;
   }
 
   // Assign ---
@@ -460,10 +494,16 @@ public class IRGen {
   //
   static List<IR.Inst> gen(Ast.Assign n, ClassInfo cinfo, Env env) throws Exception {
 
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    CodePack rhs = gen(n.rhs, cinfo, env);
+    code.addAll(rhs.code);
 
-    //    ... need code
+    if (n.lhs instanceof Ast.Id) {
+      IR.Dest lhs = new IR.Id(((Ast.Id) n.lhs).nm);
+      code.add(new IR.Move(lhs, rhs.src));
+    }
 
-
+    return code;
   }
 
   // CallStmt ---
@@ -495,12 +535,33 @@ public class IRGen {
   //    out return value's type (through method's decl in ClassInfo rec)
   // 8. Generate an indirect call with the global label
   //
-  static CodePack handleCall(Ast.Exp obj, String name, Ast.Exp[] args, 
+  static CodePack handleCall(Ast.Exp obj, String name, Ast.Exp[] args,
 			     ClassInfo cinfo, Env env, boolean retFlag) throws Exception {
 
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
 
-    //    ... need code
+    // 1) Invoke gen() on obj
+    CodePack p = gen(obj, cinfo, env);
 
+    // 2) Call getClassInfo() on obj to get base ClassInfo
+    ClassInfo this_cinfo = getClassInfo(obj, cinfo, env);
+
+    // 3) Access base class ClassInfo to get method's offset in vtable
+    int m_offset = IR.Type.PTR.size;
+    for (String mdecl: this_cinfo.vtable) {
+      if (mdecl.equals(name)) {
+        break;
+      }
+      m_offset += IR.Type.PTR.size;
+    }
+
+    // 4) Add obj's as 0th argument to args list
+    args[0] = obj;
+
+    // 5) Generate an IR.Load to get class descriptor from obj's storage
+    //AddrPack ap = genAddr((Ast.Field) obj, cinfo, env);
+    IR.Dest dest = new IR.Id(name);
+    code.add(new IR.Load(p.type, dest, p.src));
 
   }
 
@@ -511,11 +572,23 @@ public class IRGen {
   // (See class notes.)
   //
   static List<IR.Inst> gen(Ast.If n, ClassInfo cinfo, Env env) throws Exception {
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    IR.Label L1 = new IR.Label();
+    CodePack p = gen(n.cond, cinfo, env);
+    code.addAll(p.code);
+    code.add(new IR.CJump(IR.ROP.EQ, p.src, IR.FALSE, L1));
+    code.addAll(gen(n.s1, cinfo, env));
+    if (n.s2 == null) {
+      code.add(new IR.LabelDec(L1));
+    } else {
+      IR.Label L2 = new IR.Label();
+      code.add(new IR.Jump(L2));
+      code.add(new IR.LabelDec(L1));
+      code.addAll(gen(n.s2, cinfo, env));
+      code.add(new IR.LabelDec(L2));
+    }
 
-
-    //    ... need code
-
-
+    return code;
   }
 
   // While ---
@@ -525,11 +598,17 @@ public class IRGen {
   // (See class notes.)
   //
   static List<IR.Inst> gen(Ast.While n, ClassInfo cinfo, Env env) throws Exception {
-
-
-    //    ... need code
-
-
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    IR.Label L1 = new IR.Label();
+    IR.Label L2 = new IR.Label();
+    code.add(new IR.LabelDec(L1));
+    CodePack p = gen(n.cond, cinfo, env);
+    code.addAll(p.code);
+    code.add(new IR.CJump(IR.ROP.EQ, p.src, IR.FALSE, L2));
+    code.addAll(gen(n.s, cinfo, env));
+    code.add(new IR.Jump(L1));
+    code.add(new IR.LabelDec(L2));
+    return code;
   }
   
   // Print ---
@@ -543,11 +622,33 @@ public class IRGen {
   //    to call
   //
   static List<IR.Inst> gen(Ast.Print n, ClassInfo cinfo, Env env) throws Exception {
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    List<IR.Src> args = new ArrayList<IR.Src>();
 
+    if (n.arg == null) {
+      args.add(new IR.StrLit(""));
+      IR.Global printStr = new IR.Global("printStr");
+      code.add(new IR.Call(printStr, true, args));
+    } else if (n.arg instanceof Ast.StrLit) {
+      args.add(new IR.StrLit(n.arg.toString()));
+      IR.Global printStr = new IR.Global("printStr");
+      code.add(new IR.Call(printStr, true, args));
+    } else {
+      CodePack p = gen((Ast.Exp) n.arg, cinfo, env);
+      if (p.type == IR.Type.INT) {
+        args.add(new IR.IntLit(((Ast.IntLit)n.arg).i));
+        IR.Global printInt = new IR.Global("printInt");
+        // code.addAll(p.code);
+        code.add(new IR.Call(printInt, true, args));
+      } else {
+        args.add(new IR.BoolLit(((Ast.BoolLit)n.arg).b));
+        IR.Global printBool = new IR.Global("printBool");
+        // code.addAll(p.code);
+        code.add(new IR.Call(printBool, true, args));
+      }
+    }
 
-    //    ... need code
-
-
+    return code;
   }
 
   // Return ---  
@@ -564,6 +665,7 @@ public class IRGen {
     if (n.val != null) {
       CodePack p;
       p = gen(n.val, cinfo, env);
+      code.addAll(p.code);
       code.add(new IR.Return(p.src));
     } else {
       code.add(new IR.Return());
@@ -618,10 +720,41 @@ public class IRGen {
   //
   static CodePack gen(Ast.NewObj n, ClassInfo cinfo, Env env) throws Exception {
 
+/*
+    List<IR0.Inst> code = new ArrayList<IR0.Inst>();
+    IR0.IntLit arg = new IR0.IntLit(n.len * 4);
+    IR0.Temp t = new IR0.Temp();
+    code.add(new IR0.Malloc(t, arg));
+    return new CodePack(t, code);
+*/
 
-    //    ... need code
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
 
+    // 1) Use class name to find corresponding ClassInfo record from ClassEnv
+    ClassInfo class_info = classEnv.get(cinfo.className());
+    IR.Global src = new IR.Global(cinfo.className());
 
+    // 2) Find class's type and object size from ClassInfo record
+    int obj_size = class_info.objSize;
+    IR.Type class_type = IR.Type.INT;
+
+    // 3) Construct a malloc call to allocate space for object
+    IR.Temp t = new IR.Temp();
+    List<IR.Src> args = new ArrayList<IR.Src>();
+    args.add(new IR.IntLit(obj_size + IR.Type.PTR.size));
+    IR.Global malloc = new IR.Global("malloc");
+    code.add(new IR.Call(malloc, true, args));
+
+    // 4) Store ptr to the class's descriptor in first slot of allocated space
+    // public Store(Type t, Addr a, Src s)
+
+    IR.Temp t2 = new IR.Temp();
+    int offset = class_info.fieldOffset(n.nm);
+    // TODO: What is the type?
+    IR.Addr addr = new IR.Addr(t2, offset);
+    code.add(new IR.Store(class_type, addr, src));
+
+    return new CodePack(class_type, src, code);
   }
   
   // Field ---
@@ -637,10 +770,12 @@ public class IRGen {
   //
   static CodePack gen(Ast.Field n, ClassInfo cinfo, Env env) throws Exception {
 
-
-    //    ... need code
-
-
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    AddrPack ap = genAddr(n, cinfo, env);
+    IR.Global src = new IR.Global(n.nm);
+    IR.Dest dest = new IR.Id(n.nm);
+    code.add(new IR.Load(ap.type, dest, ap.addr));
+    return new CodePack(ap.type, src, code);
   }
   
   // 2. genAddr()
@@ -652,11 +787,24 @@ public class IRGen {
   //   2.4 Generate an IR.Addr based on the offset
   //
   static AddrPack genAddr(Ast.Field n, ClassInfo cinfo, Env env) throws Exception {
+    /*
+    List<IR0.Inst> code = new ArrayList<IR0.Inst>();
+    CodePack ar = gen(n.ar);
+    code.addAll(ar.code);
+    IR0.Temp t2 = new IR0.Temp();
+    IR0.IntLit intSz = new IR0.IntLit(4);
+    return new AddrPack(new IR0.Addr(t2, 0), code);
+     */
 
+    List<IR.Inst> code = new ArrayList<IR.Inst>();
+    CodePack obj = gen(n.obj, cinfo, env);
+    code.addAll(obj.code);
+    IR.Temp t2 = new IR.Temp();
 
-    //    ... need code
-
-
+    ClassInfo this_cinfo = getClassInfo(n.obj, cinfo, env);
+    int offset = this_cinfo.fieldOffset(n.nm);
+    // TODO: What is the type?
+    return new AddrPack(IR.Type.PTR, new IR.Addr(t2, offset), code);
   }
   
   // Id ---
@@ -671,11 +819,14 @@ public class IRGen {
   //     on this new node
   //
   static CodePack gen(Ast.Id n, ClassInfo cinfo, Env env) throws Exception {
-
-
-    //    ... need code
-
-
+    if (env.containsKey(n.nm)) {
+      // TODO: What is the type?
+      return new CodePack(IR.Type.PTR, new IR.Id(n.nm));
+    } else {
+      Ast.Field thisField = new Ast.Field(new Ast.This(), n.nm);
+      CodePack p = gen(thisField, cinfo, env);
+      return p;
+    }
   }
 
   // This ---
@@ -688,6 +839,7 @@ public class IRGen {
   // int i;
   //
   static CodePack gen(Ast.IntLit n) throws Exception {
+    // return new CodePack(new IR0.IntLit(n.i));
     return  new CodePack(IR.Type.INT, new IR.IntLit(n.i));
   }
 
