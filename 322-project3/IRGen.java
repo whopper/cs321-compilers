@@ -250,6 +250,8 @@ public class IRGen {
 
     // 3) Compute offset values for field vars
     for (Ast.VarDecl var: n.flds) {
+      cinfo.fdecls.add(var);
+
       if (var.t == Ast.IntType) {   // Int. Size = 4
         cinfo.offsets.add(IR.Type.INT.size);
         obj_size = obj_size + IR.Type.INT.size;
@@ -381,11 +383,12 @@ public class IRGen {
     List<String> params = new ArrayList<String>();
     List<String> vars = new ArrayList<String>();
     List<Ast.Stmt> stmts = new ArrayList<Ast.Stmt>();
-
+    String name = n.nm;
 
     if (!n.nm.equals("main")) {
       // 1) Construct a global label of form "<base class name>_<method name>"
       IR.Global label = new IR.Global(cinfo.className() + "_" + n.nm);
+      name = cinfo.className() + "_" + n.nm;
 
       // 2) Add "obj" into the params list as the 0th item
       params.add("obj");
@@ -403,6 +406,10 @@ public class IRGen {
     for (Ast.VarDecl var: n.vars) {
       env.put(var.nm, var.t);
       vars.add(var.nm);
+
+      if (var.init != null) {
+        code.addAll(gen(var, cinfo, env));
+      }
     }
 
     // 4) Generate IR code for all statements
@@ -417,7 +424,7 @@ public class IRGen {
 
     // 5) Return an IR.Func with the above
 
-    return new IR.Func(n.nm, params, vars, code);
+    return new IR.Func(name, params, vars, code);
   } 
 
   // VarDecl ---
@@ -442,10 +449,7 @@ public class IRGen {
 
       IR.Move move = new IR.Move(new IR.Id(n.nm), p.src);
       code.add(move);
-    }
 
-    // 2) return generated code (or null if none)
-    if (code.size() > 0) {
       return code;
     } else {
       return null;
@@ -496,26 +500,25 @@ public class IRGen {
   // 3. otherwise, call genAddr() on lhs, and generate an IR.Store instruction
   //
   static List<IR.Inst> gen(Ast.Assign n, ClassInfo cinfo, Env env) throws Exception {
-
     List<IR.Inst> code = new ArrayList<IR.Inst>();
     CodePack rhs = gen(n.rhs, cinfo, env);
     code.addAll(rhs.code);
 
     if (n.lhs instanceof Ast.Id) {
       if (env.containsKey(((Ast.Id) n.lhs).nm)) {
-        IR.Dest lhs = new IR.Id(((Ast.Id) n.lhs).nm); // just these 2
+        IR.Dest lhs = new IR.Id(((Ast.Id) n.lhs).nm);
         code.add(new IR.Move(lhs, rhs.src));
       } else {
         Ast.Field f = new Ast.Field(new Ast.This(), ((Ast.Id)n.lhs).nm);
         AddrPack p = genAddr(f, cinfo, env);
         code.addAll(p.code);
-        //code.add(new IR.Store(gen(rhs.type), p.addr, rhs.src));
+        code.add(new IR.Store(rhs.type, p.addr, rhs.src));
       }
 
     } else {
       AddrPack p = genAddr(n.lhs, cinfo, env);
       code.addAll(p.code);
-      // code.add(new IR.Store(gen(p.type), p.addr, rhs.src));
+      code.add(new IR.Store(p.type, p.addr, rhs.src));
       // code.add(new IR.Load(gen(rhs.type), new IR.Temp(), p.addr));
     }
 
@@ -589,21 +592,10 @@ public class IRGen {
     IR.Temp t = new IR.Temp();
     IR.Temp t2 = new IR.Temp();
 
-
-    //for (String mdecl: this_cinfo.vtable) {
-    //  if (mdecl.equals(name)) {
-    //    break;
-    //  }
-    //  m_offset += IR.Type.PTR.size;
-    //}
-
     // 4) Add obj's as 0th argument to args list
     //args[0] = obj; wat
 
     // 5) Generate an IR.Load to get class descriptor from obj's storage
-    //AddrPack ap = genAddr((Ast.Field) obj, cinfo, env);
-    //IR.Dest dest = new IR.Id(name);
-    //code.add(new IR.Load(p.type, dest, p.src));
     IR.Addr addr = new IR.Addr(p.src, 0);
     IR.Load load = new IR.Load(gen(type), t, addr);
     code.add(load);
@@ -696,32 +688,20 @@ public class IRGen {
       code.add(new IR.Call(printStr, false, args));
       // IR.Call call = new IR.Call(new IR.Global("print"), false, src, null);
     } else if (n.arg instanceof Ast.StrLit) {
-      args.add(new IR.StrLit(n.arg.toString()));
       IR.Global printStr = new IR.Global("printStr");
+      args.add(new IR.StrLit(n.arg.toString()));
       code.add(new IR.Call(printStr, false, args));
-
-      /*
-        CodePack p = gen(n.arg, cinfo, env);
-        code.addAll(p.code);
-        srcs.add(p.src);
-        IR.Call call = new IR.Call(new IR.Global("printStr"), false, srcs, null);
-
-       */
     } else {
       CodePack p = gen((Ast.Exp) n.arg, cinfo, env);
       code.addAll(p.code);
 
       if (p.type == IR.Type.INT) {
         args.add(p.src);
-        args.add(new IR.IntLit(((Ast.IntLit)n.arg).i));
         IR.Global printInt = new IR.Global("printInt");
-        // code.addAll(p.code);
         code.add(new IR.Call(printInt, false, args));
-        // code.a
       } else {
-        args.add(new IR.BoolLit(((Ast.BoolLit)n.arg).b));
+        args.add(p.src);
         IR.Global printBool = new IR.Global("printBool");
-        // code.addAll(p.code);
         code.add(new IR.Call(printBool, false, args));
       }
     }
@@ -797,42 +777,31 @@ public class IRGen {
   //     the allocated space
   //
   static CodePack gen(Ast.NewObj n, ClassInfo cinfo, Env env) throws Exception {
-
-/*
-    List<IR0.Inst> code = new ArrayList<IR0.Inst>();
-    IR0.IntLit arg = new IR0.IntLit(n.len * 4);
-    IR0.Temp t = new IR0.Temp();
-    code.add(new IR0.Malloc(t, arg));
-    return new CodePack(t, code);
-*/
-
     List<IR.Inst> code = new ArrayList<IR.Inst>();
     List<IR.Src> args = new ArrayList<IR.Src>();
 
     // 1) Use class name to find corresponding ClassInfo record from ClassEnv
-    ClassInfo class_info = classEnv.get(cinfo.className());
+    ClassInfo class_info = classEnv.get(n.nm);
     IR.Global cname = new IR.Global(cinfo.className());
 
     // 2) Find class's type and object size from ClassInfo record
     int obj_size = class_info.objSize;
-    IR.Type class_type = IR.Type.INT;
+    Ast.Type class_type = env.get(n.nm);
 
     // 3) Construct a malloc call to allocate space for object
-    IR.Temp t = new IR.Temp();
-    args.add(new IR.IntLit(obj_size + IR.Type.PTR.size));
     IR.Global malloc = new IR.Global("malloc");
-    code.add(new IR.Call(malloc, false, args, t));
+    IR.Temp temp = new IR.Temp();
+    args.add(new IR.IntLit(obj_size));
+    IR.Call call = new IR.Call(malloc, false, args, temp);
+    code.add(call);
 
     // 4) Store ptr to the class's descriptor in first slot of allocated space
     // public Store(Type t, Addr a, Src s)
 
-    IR.Temp t2 = new IR.Temp();
-    int offset = class_info.fieldOffset(n.nm);
-    // TODO: What is the type?
-    IR.Addr addr = new IR.Addr(t2);
-    code.add(new IR.Store(class_type, addr, cname ));
+    IR.Store store = new IR.Store(IR.Type.PTR, new IR.Addr(temp),new IR.Global("class_" + n.nm));
+    code.add(store);
 
-    return new CodePack(class_type, t, code);
+    return new CodePack(gen(class_type), temp, code);
   }
   
   // Field ---
@@ -870,25 +839,14 @@ public class IRGen {
   //   2.4 Generate an IR.Addr based on the offset
   //
   static AddrPack genAddr(Ast.Field n, ClassInfo cinfo, Env env) throws Exception {
-    /*
-    List<IR0.Inst> code = new ArrayList<IR0.Inst>();
-    CodePack ar = gen(n.ar);
-    code.addAll(ar.code);
-    IR0.Temp t2 = new IR0.Temp();
-    IR0.IntLit intSz = new IR0.IntLit(4);
-    return new AddrPack(new IR0.Addr(t2, 0), code);
-     */
-
     List<IR.Inst> code = new ArrayList<IR.Inst>();
     CodePack obj = gen(n.obj, cinfo, env);
-
-    code.addAll(obj.code);
-    IR.Temp t2 = new IR.Temp();
-
     ClassInfo this_cinfo = getClassInfo(n.obj, cinfo, env);
+
     int offset = this_cinfo.fieldOffset(n.nm);
-    // TODO: What is the type?
-    return new AddrPack(IR.Type.PTR, new IR.Addr(obj.src, offset), code);
+    IR.Addr addr = new IR.Addr(obj.src, offset);
+    code.addAll(obj.code);
+    return new AddrPack(gen(this_cinfo.fieldType(n.nm)), addr, code);
   }
   
   // Id ---
