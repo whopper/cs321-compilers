@@ -248,10 +248,16 @@ public class IRGen {
       }
     }
 
-    // 3) Compute offset values for field vars
+    // 3) Compute offset values for field vars (first add class offset)
+    cinfo.offsets.add(IR.Type.PTR.size);
+    obj_size += IR.Type.PTR.size;
+
     for (Ast.VarDecl var: n.flds) {
       cinfo.fdecls.add(var);
+      cinfo.offsets.add(obj_size);
+      obj_size += gen(var.t).size;
 
+      /*
       if (var.t == Ast.IntType) {   // Int. Size = 4
         cinfo.offsets.add(IR.Type.INT.size);
         obj_size = obj_size + IR.Type.INT.size;
@@ -262,10 +268,11 @@ public class IRGen {
         cinfo.offsets.add(IR.Type.PTR.size);
         obj_size = obj_size + IR.Type.PTR.size;
       }
+      */
     }
 
     // 4) Decide object's size
-    cinfo.objSize = obj_size + IR.Type.PTR.size; // Additional pointer for pointer to class itself
+    cinfo.objSize = obj_size;
     return cinfo;
   }
 
@@ -379,6 +386,7 @@ public class IRGen {
   // 5. Return an IR.Func with the above
   //
   static IR.Func gen(Ast.MethodDecl n, ClassInfo cinfo) throws Exception {
+    IR.Temp.reset();
     List<IR.Inst> code = new ArrayList<IR.Inst>();
     List<String> params = new ArrayList<String>();
     List<String> vars = new ArrayList<String>();
@@ -504,6 +512,8 @@ public class IRGen {
     CodePack rhs = gen(n.rhs, cinfo, env);
     code.addAll(rhs.code);
 
+    System.out.println(cinfo.offsets);
+
     if (n.lhs instanceof Ast.Id) {
       if (env.containsKey(((Ast.Id) n.lhs).nm)) {
         IR.Dest lhs = new IR.Id(((Ast.Id) n.lhs).nm);
@@ -519,7 +529,6 @@ public class IRGen {
       AddrPack p = genAddr(n.lhs, cinfo, env);
       code.addAll(p.code);
       code.add(new IR.Store(p.type, p.addr, rhs.src));
-      // code.add(new IR.Load(gen(rhs.type), new IR.Temp(), p.addr));
     }
 
     return code;
@@ -686,7 +695,6 @@ public class IRGen {
       args.add(new IR.StrLit(""));
       IR.Global printStr = new IR.Global("printStr");
       code.add(new IR.Call(printStr, false, args));
-      // IR.Call call = new IR.Call(new IR.Global("print"), false, src, null);
     } else if (n.arg instanceof Ast.StrLit) {
       IR.Global printStr = new IR.Global("printStr");
       args.add(new IR.StrLit(n.arg.toString()));
@@ -696,6 +704,10 @@ public class IRGen {
       code.addAll(p.code);
 
       if (p.type == IR.Type.INT) {
+        args.add(p.src);
+        IR.Global printInt = new IR.Global("printInt");
+        code.add(new IR.Call(printInt, false, args));
+      } else if (p.type == IR.Type.PTR) {
         args.add(p.src);
         IR.Global printInt = new IR.Global("printInt");
         code.add(new IR.Call(printInt, false, args));
@@ -816,18 +828,20 @@ public class IRGen {
   //   1.2 Add an IR.Load to get its value
   //
   static CodePack gen(Ast.Field n, ClassInfo cinfo, Env env) throws Exception {
-
     List<IR.Inst> code = new ArrayList<IR.Inst>();
 
     AddrPack ap = genAddr(n, cinfo, env);
     code.addAll(ap.code);
 
     IR.Temp t = new IR.Temp();
-
-    IR.Global src = new IR.Global(n.nm);
-    IR.Dest dest = new IR.Id(n.nm);
-    code.add(new IR.Load(ap.type, dest, ap.addr));
+    IR.Load load = new IR.Load(ap.type, t, ap.addr);
+    code.add(load);
     return new CodePack(ap.type, t, code);
+
+    //IR.Global src = new IR.Global(n.nm);
+    //IR.Dest dest = new IR.Id(n.nm);
+    //code.add(new IR.Load(ap.type, dest, ap.addr));
+    //return new CodePack(ap.type, t, code);
   }
   
   // 2. genAddr()
