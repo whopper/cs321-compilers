@@ -3,7 +3,7 @@
 // 
 // IR code generator for miniJava's AST.
 //
-// (Starter version.)
+// Will Hopper
 //
 
 import java.util.*;
