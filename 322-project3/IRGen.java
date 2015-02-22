@@ -237,7 +237,6 @@ public class IRGen {
   // 4. Decide object's size
   //
   private static ClassInfo createClassInfo(Ast.ClassDecl n) throws Exception {
-    int obj_size = 0;
     // 1) If parent exists, clone parent's record, otherwise create a new one
     ClassInfo cinfo = (n.pnm != null) ? new ClassInfo(n, classEnv.get(n.pnm)) : new ClassInfo(n);
 
@@ -249,13 +248,13 @@ public class IRGen {
     }
 
     // 3) Compute offset values for field vars (first add class offset)
-    cinfo.offsets.add(IR.Type.PTR.size);
-    obj_size += IR.Type.PTR.size;
+    //cinfo.offsets.add(IR.Type.PTR.size);
+    //cinfo.objSize += IR.Type.PTR.size;
 
     for (Ast.VarDecl var: n.flds) {
       cinfo.fdecls.add(var);
-      cinfo.offsets.add(obj_size);
-      obj_size += gen(var.t).size;
+      cinfo.offsets.add(cinfo.objSize);
+      cinfo.objSize += gen(var.t).size;
 
       /*
       if (var.t == Ast.IntType) {   // Int. Size = 4
@@ -271,8 +270,6 @@ public class IRGen {
       */
     }
 
-    // 4) Decide object's size
-    cinfo.objSize = obj_size;
     return cinfo;
   }
 
@@ -511,9 +508,7 @@ public class IRGen {
     List<IR.Inst> code = new ArrayList<IR.Inst>();
     CodePack rhs = gen(n.rhs, cinfo, env);
     code.addAll(rhs.code);
-
-    System.out.println(cinfo.offsets);
-
+    
     if (n.lhs instanceof Ast.Id) {
       if (env.containsKey(((Ast.Id) n.lhs).nm)) {
         IR.Dest lhs = new IR.Id(((Ast.Id) n.lhs).nm);
