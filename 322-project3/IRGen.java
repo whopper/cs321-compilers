@@ -247,7 +247,7 @@ public class IRGen {
       }
     }
 
-    // 3) Compute offset values for field vars (first add class offset)
+    // 3) Compute offset values for field vars
     //cinfo.offsets.add(IR.Type.PTR.size);
     //cinfo.objSize += IR.Type.PTR.size;
 
@@ -349,7 +349,6 @@ public class IRGen {
       }
     }
 
-
     return new IR.Data(new IR.Global("class_" + n.nm), class_methods.size() * IR.Type.PTR.size, class_methods);
   }
 
@@ -402,7 +401,6 @@ public class IRGen {
     // 3) Create an Env() containing all params and all local vars
     Env env = new Env();
 
-    // code.add(new IR.LabelDec("Begin"));
     for (Ast.Param param: n.params) {
       env.put(param.nm, param.t);
       params.add(param.nm);
@@ -486,10 +484,6 @@ public class IRGen {
 
     for (Ast.Stmt stmt: n.stmts) {
       code.addAll(gen(stmt, cinfo, env));
-      //List<IR.Inst> insts = gen(stmt, cinfo, env);
-      //for (IR.Inst inst: insts) {
-      //  code.add(inst);
-      //}
     }
 
     return code;
@@ -508,7 +502,7 @@ public class IRGen {
     List<IR.Inst> code = new ArrayList<IR.Inst>();
     CodePack rhs = gen(n.rhs, cinfo, env);
     code.addAll(rhs.code);
-    
+
     if (n.lhs instanceof Ast.Id) {
       if (env.containsKey(((Ast.Id) n.lhs).nm)) {
         IR.Dest lhs = new IR.Id(((Ast.Id) n.lhs).nm);
@@ -579,11 +573,8 @@ public class IRGen {
       type = new Ast.ObjType(name);
     }
 
-    //Ast.Type type = p.type;
-
     // 2) Call getClassInfo() on obj to get base ClassInfo
     ClassInfo this_cinfo = getClassInfo(obj, cinfo, env);
-    // ClassInfo c = classInfos.get(((AST.ObjType) p.type).nm)
 
     // 3) Access base class ClassInfo to get method's offset in vtable
     int m_offset = this_cinfo.methodOffset(name);
@@ -595,9 +586,6 @@ public class IRGen {
 
     IR.Temp t = new IR.Temp();
     IR.Temp t2 = new IR.Temp();
-
-    // 4) Add obj's as 0th argument to args list
-    //args[0] = obj; wat
 
     // 5) Generate an IR.Load to get class descriptor from obj's storage
     IR.Addr addr = new IR.Addr(p.src, 0);
@@ -803,8 +791,6 @@ public class IRGen {
     code.add(call);
 
     // 4) Store ptr to the class's descriptor in first slot of allocated space
-    // public Store(Type t, Addr a, Src s)
-
     IR.Store store = new IR.Store(IR.Type.PTR, new IR.Addr(temp),new IR.Global("class_" + n.nm));
     code.add(store);
 
@@ -832,11 +818,6 @@ public class IRGen {
     IR.Load load = new IR.Load(ap.type, t, ap.addr);
     code.add(load);
     return new CodePack(ap.type, t, code);
-
-    //IR.Global src = new IR.Global(n.nm);
-    //IR.Dest dest = new IR.Id(n.nm);
-    //code.add(new IR.Load(ap.type, dest, ap.addr));
-    //return new CodePack(ap.type, t, code);
   }
   
   // 2. genAddr()
