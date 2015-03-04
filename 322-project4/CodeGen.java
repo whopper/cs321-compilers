@@ -118,29 +118,19 @@ class CodeGen {
     /* 3) Save any callee-save registers on the stack */
     // generates code to save any callee-save registers that get assigned
     // by the register allocator.
-    // For every calleeSaveReg in regMap, do something
     for (X86.Reg callee_reg: X86.calleeSaveRegs) {
       if (regMap.containsValue(callee_reg)) {
         X86.emit1("pushq", callee_reg);
       }
     }
 
-    /*
-    ArrayList<X86.Reg> callee_Saves = new ArrayList<X86.Reg>();
-    for (X86.Reg callee_reg: X86.calleeSaveRegs) {
-      if (regMap.containsKey(callee_reg)) {
-
-      }
-    }
-    */
-
     /* 4) Make space for the local frame */
     if ((calleeSaveSize % 16) == 0) {
       frameSize += 8;
     }
 
+    // TODO: This doesn't happen in all cases
     X86.emit2("subq", new X86.Imm(frameSize), X86.RSP);
-
 
     /* 5) Move the incoming actual arguments to their assigned locations */
 
@@ -189,7 +179,7 @@ class CodeGen {
   // - generate code for the Binop
   //
   // * For DIV:
-  //   The RegAlloc module guaranteeds that no caller-save register
+  //   The RegAlloc module guarantees that no caller-save register
   //   (including RAX, RDX) is allocated across a DIV. (It also
   //   preferenced the left operand and result to RAX.)  But it is 
   //   still possible that the right operand is in RAX or RDX.
@@ -204,9 +194,66 @@ class CodeGen {
   //
   static void gen(IR1.Binop n) throws Exception {
 
-    // ... need code ...
+    if (n.op instanceof IR1.AOP) {
+      /* 1) call gen_source() to gen code for both left and right operands */
+      X86.Reg rhs  = gen_source(n.src2, tempReg1);
+      X86.Reg lhs;
+      X86.Reg dest = regMap.get(n.dst);
 
+      if (n.op != IR1.AOP.DIV) {
+        lhs = gen_source(n.src1, tempReg2);
+      } else {
+        lhs = gen_source(n.src1, X86.RAX);
+      }
 
+      // a) if right op is in dst reg, generate "mov" to put it to a tempReg
+      if (regMap.get(n.dst) == rhs) {
+        X86.emit2("movq", rhs, tempReg1);
+        rhs = tempReg1;
+      }
+
+      // b) generate a "mov" to move left op to dst reg
+      if (n.op instanceof IR1.AOP && n.op != IR1.AOP.DIV) {
+        X86.emit2("movq", lhs, regMap.get(n.dst));
+      }
+
+      // c) generate code for the Binop
+      if (n.op == IR1.AOP.ADD) {
+        X86.emit2("addq", rhs, dest);
+      } else if (n.op == IR1.AOP.SUB) {
+        X86.emit2("subq", rhs, dest);
+      } else if (n.op == IR1.AOP.MUL) {
+        X86.emit2("imulq", rhs, dest);
+      } else if (n.op == IR1.AOP.DIV) {
+        X86.emit0("cqto");
+        X86.emit1("idivq", rhs);
+      } else if (n.op == IR1.AOP.AND) {
+
+      } else if (n.op == IR1.AOP.OR) {
+
+      }
+    }
+
+    /* Relational Ops */
+    if (n.op instanceof IR1.ROP) {
+      X86.Reg lhs = gen_source(n.src1, tempReg1);
+      X86.Reg rhs  = gen_source(n.src2, tempReg2);
+      X86.Reg dest = regMap.get(n.dst);
+      String set_str = "setg";
+
+      if (n.op == IR1.ROP.GT) {
+        set_str = "setg";
+      } else if (n.op == IR1.ROP.LT) {
+        set_str = "setl";
+      }
+
+      // a) generate "cmp" and "set"
+      X86.emit2("cmpq", rhs, lhs);
+      X86.emit0(set_str + " " + X86.regName[0][dest.r]);
+
+      // b) generate "movzbq" to size--extend the result register
+      X86.emit0("movzbq " + X86.regName[0][dest.r] + "," + X86.regName[dest.s.ordinal()][dest.r]);
+    }
   }	
 
   // Unop ---
@@ -220,7 +267,16 @@ class CodeGen {
   // - generate code for the op
   //  
   static void gen(IR1.Unop n) throws Exception {
+    /* 1) call gen_source() to generate code for operand */
+    gen_source(n.src, tempReg1);
 
+    /* 2) Generate a "mov" to move operand to dest reg */
+    X86.emit2("movq", tempReg1, regMap.get(n.dst));
+
+    /* 3) Generate code for the op */
+    if (n.op == IR1.UOP.NOT) {
+      X86.emit1("notq", regMap.get(n.dst));
+    }
 
   }
 
@@ -235,10 +291,12 @@ class CodeGen {
   static void gen(IR1.Move n) throws Exception {
 
     /* 1) Call gen_source() to generate code for the src */
-    // give it a src and a temp reg
     X86.Reg code = gen_source(n.src, regMap.get(n.dst));
 
-    /* 2) Generate a "mov"*/
+    /* 2) Generate a "mov" */
+    if (n.src instanceof IR1.Temp || n.src instanceof IR1.Id) {
+      X86.emit2("movq", code, regMap.get(n.dst));
+    }
   }
 
   // Load ---  
@@ -300,10 +358,13 @@ class CodeGen {
   //     suffixes are the same
   //
   static void gen(IR1.CJump n) throws Exception {
+    /* 1) Recursively generate code for the two operands */
+    X86.Reg reg1 = gen_source(n.src1, tempReg1);
+    X86.Reg reg2 = gen_source(n.src2, tempReg2);
 
-    // ... need code ...
-
-
+    /* Generate a "cmp" and a jump instruction */
+    X86.emit2("cmpq", tempReg2, regMap.get(n.src1));
+    X86.emit0("je " + fnName + "_" + n.lab);
   }	
 
   // Jump ---
